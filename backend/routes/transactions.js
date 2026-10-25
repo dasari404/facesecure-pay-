@@ -62,11 +62,24 @@ router.post('/send', verifyToken, [
     );
     
     const senderBalance = parseFloat(sender.balance);
-    if (senderBalance < amount) {
+    
+    // Check pending transactions to prevent overdraft
+    const [[{ totalPending }]] = await db.query(`
+      SELECT COALESCE(SUM(amount), 0) as totalPending 
+      FROM transactions 
+      WHERE sender_id = ? AND status = 'pending'
+    `, [senderId]);
+    
+    const pendingAmount = parseFloat(totalPending);
+    const availableBalance = senderBalance - pendingAmount;
+    
+    if (availableBalance < amount) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Insufficient balance',
+        message: 'Insufficient balance (including pending transactions)',
         currentBalance: senderBalance,
+        pendingAmount: pendingAmount,
+        availableBalance: availableBalance,
         requestedAmount: amount
       });
     }
@@ -113,7 +126,7 @@ router.post('/send', verifyToken, [
 });
 
 // Check fraud for a transaction
-router.post('/fraud/check', verifyToken, [
+router.post('/check', verifyToken, [
   body('transactionId').notEmpty()
 ], async (req, res) => {
   try {
@@ -241,6 +254,33 @@ router.post('/verify', verifyToken, [
     
     try {
       await connection.beginTransaction();
+      
+      // Lock the transaction row to prevent concurrent verification
+      const [transactions] = await connection.query(
+        'SELECT * FROM transactions WHERE transaction_id = ? AND sender_id = ? FOR UPDATE',
+        [transactionId, req.user.id]
+      );
+      
+      if (transactions.length === 0) {
+        await connection.rollback();
+        connection.release();
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Transaction not found or already processed' 
+        });
+      }
+      
+      const lockedTransaction = transactions[0];
+      
+      // Double-check status after acquiring lock
+      if (lockedTransaction.status !== 'pending') {
+        await connection.rollback();
+        connection.release();
+        return res.status(400).json({ 
+          success: false, 
+          message: `Transaction is already ${lockedTransaction.status}` 
+        });
+      }
       
       // Deduct from sender
       await connection.query(

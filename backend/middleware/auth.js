@@ -12,7 +12,7 @@ const verifyToken = (req, res, next) => {
   }
   
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'facesecure-dev-secret-change-in-production');
     req.user = decoded;
     next();
   } catch (error) {
@@ -40,7 +40,7 @@ const optionalAuth = (req, res, next) => {
   
   if (token) {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'facesecure-dev-secret-change-in-production');
       req.user = decoded;
     } catch (error) {
       // Invalid token but don't block request
