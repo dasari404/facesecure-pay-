@@ -126,7 +126,7 @@ router.post('/send', verifyToken, [
 });
 
 // Check fraud for a transaction
-router.post('/fraud/check', verifyToken, [
+router.post('/check', verifyToken, [
   body('transactionId').notEmpty()
 ], async (req, res) => {
   try {

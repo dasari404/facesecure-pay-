@@ -487,7 +487,7 @@ function captureFrame() {
 // Run fraud check
 async function runFraudCheck(transactionId) {
   try {
-    const response = await apiCall(`${CONFIG.API_BASE_URL}/fraud/fraud/check`, {
+    const response = await apiCall(`${CONFIG.API_BASE_URL}/fraud/check`, {
       method: 'POST',
       body: {
         transactionId
