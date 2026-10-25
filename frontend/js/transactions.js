@@ -2,6 +2,7 @@
 
 let currentTransactionId = null;
 let recipientSearchTimeout = null;
+let validatedRecipient = null; // Store validated recipient data
 
 // Load user profile and balance
 async function loadUserProfile() {
@@ -102,19 +103,31 @@ function displayTransactions(transactions) {
   }).join('');
 }
 
-// Search for recipient (debounced)
+// Search for recipient (debounced with enhanced UI feedback)
 function searchRecipient(email) {
+  const inputEl = document.getElementById('recipient-email');
+  const loadingEl = document.getElementById('search-loading');
+  const errorEl = document.getElementById('recipient-error');
+  const foundEl = document.getElementById('recipient-found');
+  
   // Clear previous timeout
   if (recipientSearchTimeout) {
     clearTimeout(recipientSearchTimeout);
   }
   
-  // Hide recipient found indicator
-  document.getElementById('recipient-found').classList.remove('show');
+  // Reset validation state
+  validatedRecipient = null;
+  inputEl.classList.remove('input-valid', 'input-invalid');
+  loadingEl.classList.remove('show');
+  errorEl.classList.remove('show');
+  foundEl.classList.remove('show');
   
   if (!email || email.length < 3) {
     return;
   }
+  
+  // Show loading indicator
+  loadingEl.classList.add('show');
   
   // Debounce search
   recipientSearchTimeout = setTimeout(async () => {
@@ -123,16 +136,32 @@ function searchRecipient(email) {
         method: 'GET'
       });
       
+      loadingEl.classList.remove('show');
+      
       if (response.success && response.users && response.users.length > 0) {
         const user = response.users[0];
+        validatedRecipient = user;
         
-        // Show recipient found
+        // Show success state
+        inputEl.classList.add('input-valid');
         document.getElementById('recipient-name').textContent = user.full_name;
         document.getElementById('recipient-id').textContent = user.email;
-        document.getElementById('recipient-found').classList.add('show');
+        
+        // Update avatar with first letter
+        const avatarEl = document.getElementById('recipient-avatar');
+        avatarEl.textContent = user.full_name.charAt(0).toUpperCase();
+        
+        foundEl.classList.add('show');
+      } else {
+        // Show error state
+        inputEl.classList.add('input-invalid');
+        errorEl.classList.add('show');
       }
     } catch (error) {
       console.error('Recipient search error:', error);
+      loadingEl.classList.remove('show');
+      inputEl.classList.add('input-invalid');
+      errorEl.classList.add('show');
     }
   }, 500);
 }
@@ -145,6 +174,17 @@ async function handleSendMoneySubmit(event) {
   const amount = parseFloat(document.getElementById('amount').value);
   const description = document.getElementById('description').value;
   const transactionType = document.getElementById('transaction-type').value;
+  const inputEl = document.getElementById('recipient-email');
+  
+  // Validate recipient before submission
+  if (!validatedRecipient) {
+    // Show error animation
+    inputEl.classList.add('shake');
+    setTimeout(() => inputEl.classList.remove('shake'), 500);
+    
+    alert('Please enter a valid recipient email or phone number.');
+    return;
+  }
   
   try {
     const response = await apiCall(API.SEND_MONEY, {
@@ -158,8 +198,10 @@ async function handleSendMoneySubmit(event) {
     });
     
     if (response.success) {
-      // Store transaction ID
+      // Store transaction ID and recipient data
       currentTransactionId = response.transactionId;
+      window.currentRecipient = validatedRecipient; // Make available to verification module
+      window.currentTransactionAmount = amount;
       
       // Show verification section
       document.getElementById('verification-section').classList.add('show');
@@ -178,10 +220,24 @@ async function handleSendMoneySubmit(event) {
 // Cancel verification
 function cancelVerification() {
   currentTransactionId = null;
+  validatedRecipient = null;
+  window.currentRecipient = null;
+  window.currentTransactionAmount = null;
+  
   document.getElementById('verification-section').classList.remove('show');
   document.getElementById('camera-view').classList.remove('show');
   document.getElementById('send-money-form').reset();
   document.getElementById('recipient-found').classList.remove('show');
+  document.getElementById('recipient-error').classList.remove('show');
+  document.getElementById('search-loading').classList.remove('show');
+  document.getElementById('recipient-email').classList.remove('input-valid', 'input-invalid');
+  
+  // Clear step results
+  document.getElementById('step-results').innerHTML = '';
+  document.getElementById('captured-frames').innerHTML = '';
+  
+  // Reset progress
+  document.getElementById('progress-fill').style.width = '0%';
   
   // Stop camera if running
   const video = document.getElementById('camera-video');

@@ -64,25 +64,21 @@ CREATE TABLE transactions (
   recipient_id INT,
   recipient_email VARCHAR(100) NOT NULL,
   amount DECIMAL(12, 2) NOT NULL,
-  transaction_type ENUM('personal', 'business', 'bill') DEFAULT 'personal',
+  transaction_type ENUM('send', 'receive', 'add_money', 'withdraw', 'personal', 'business', 'bill') NOT NULL,
   status ENUM('pending', 'processing', 'completed', 'failed', 'cancelled') DEFAULT 'pending',
-  description TEXT,
   face_verified BOOLEAN DEFAULT FALSE,
   liveness_verified BOOLEAN DEFAULT FALSE,
-  liveness_score DECIMAL(5, 2),
   verification_time DECIMAL(5, 2),
-  verification_attempts INT DEFAULT 0,
   fraud_check_passed BOOLEAN DEFAULT TRUE,
   fraud_score INT DEFAULT 0,
-  fraud_check_result VARCHAR(50),
+  fraud_check_result VARCHAR(20),
+  description TEXT,
   metadata JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP NULL,
   FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_transaction_id (transaction_id),
   INDEX idx_sender_id (sender_id),
-  INDEX idx_recipient_id (recipient_id),
   INDEX idx_status (status),
   INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -128,7 +124,7 @@ CREATE TABLE report_updates (
   INDEX idx_report_id (report_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert default admin
+-- Insert default admin account
+-- Password: admin123 (bcrypt hash)
 INSERT INTO admins (username, password_hash, email, full_name, role) 
 VALUES ('admin', '$2a$10$XQZ9u.QJ9vK3LQk.8xHvYuF3xYyW4R5yqF8hN9kQ2mE7pL3zC8K2e', 'admin@facesecure.com', 'System Administrator', 'super_admin');
--- Note: password_hash above is for 'admin123'

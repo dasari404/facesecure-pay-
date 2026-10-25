@@ -6,523 +6,7 @@
     <title>Transactions - FaceSecure Pay</title>
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/auth.css">
-    <style>
-        /* Transaction Page Specific Styles */
-        .transaction-page {
-            min-height: 100vh;
-            background: var(--bg-primary);
-            padding-top: 80px;
-        }
-
-        .transaction-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 30px;
-        }
-
-        /* Sidebar */
-        .transaction-sidebar {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 24px;
-            height: fit-content;
-            position: sticky;
-            top: 100px;
-        }
-
-        .user-profile {
-            text-align: center;
-            margin-bottom: 32px;
-            padding-bottom: 24px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .user-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            margin: 0 auto 16px;
-        }
-
-        .user-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-        }
-
-        .user-email {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-
-        .balance-widget {
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
-        }
-
-        .balance-label {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.8);
-            margin-bottom: 8px;
-        }
-
-        .balance-amount {
-            font-size: 32px;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 12px;
-        }
-
-        .add-money-btn {
-            width: 100%;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .add-money-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .sidebar-nav {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .sidebar-nav li {
-            margin-bottom: 8px;
-        }
-
-        .sidebar-nav a {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            border-radius: 8px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        .sidebar-nav a:hover,
-        .sidebar-nav a.active {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--accent-primary);
-        }
-
-        .sidebar-nav .icon {
-            font-size: 20px;
-            width: 24px;
-        }
-
-        /* Main Content */
-        .transaction-main {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        .page-header {
-            margin-bottom: 8px;
-        }
-
-        .page-title {
-            font-size: 32px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-        }
-
-        .page-subtitle {
-            color: var(--text-secondary);
-            font-size: 16px;
-        }
-
-        .transaction-card {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 32px;
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .card-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .card-badge {
-            padding: 4px 12px;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            border-radius: 12px;
-            font-size: 12px;
-            color: var(--accent-primary);
-            font-weight: 600;
-        }
-
-        /* Send Money Form */
-        .send-money-form {
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .form-group label {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 16px;
-            transition: all 0.2s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .form-hint {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .recipient-found {
-            display: none;
-            padding: 12px;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 8px;
-            margin-top: 8px;
-        }
-
-        .recipient-found.show {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .recipient-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
-
-        .recipient-info h4 {
-            color: var(--text-primary);
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 2px;
-        }
-
-        .recipient-info p {
-            color: var(--text-secondary);
-            font-size: 12px;
-        }
-
-        /* Verification Section */
-        .verification-section {
-            background: rgba(99, 102, 241, 0.05);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 12px;
-            padding: 24px;
-            display: none;
-        }
-
-        .verification-section.show {
-            display: block;
-        }
-
-        .verification-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .verification-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .verification-steps {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .verification-step {
-            flex: 1;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            text-align: center;
-            opacity: 0.5;
-            transition: all 0.3s;
-        }
-
-        .verification-step.active {
-            opacity: 1;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.3);
-        }
-
-        .verification-step.complete {
-            opacity: 1;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .step-number {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-        }
-
-        .step-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        #camera-view {
-            width: 100%;
-            max-width: 640px;
-            height: 480px;
-            background: #000;
-            border-radius: 12px;
-            margin: 20px auto;
-            display: none;
-            position: relative;
-            overflow: hidden;
-        }
-
-        #camera-view.show {
-            display: block;
-        }
-
-        #camera-video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .camera-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 280px;
-            height: 360px;
-            border: 3px solid var(--accent-primary);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .liveness-instruction {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            padding: 16px 24px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 600;
-            text-align: center;
-        }
-
-        /* Transaction History */
-        .transaction-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .transaction-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-
-        .transaction-item:hover {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .transaction-left {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .transaction-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-        }
-
-        .transaction-icon.sent {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-        }
-
-        .transaction-icon.received {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-        }
-
-        .transaction-details h4 {
-            color: var(--text-primary);
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .transaction-details p {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-
-        .transaction-right {
-            text-align: right;
-        }
-
-        .transaction-amount {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .transaction-amount.sent {
-            color: #ef4444;
-        }
-
-        .transaction-amount.received {
-            color: #10b981;
-        }
-
-        .transaction-status {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .transaction-status.completed {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-        }
-
-        .transaction-status.pending {
-            background: rgba(245, 158, 11, 0.1);
-            color: #f59e0b;
-        }
-
-        .transaction-status.failed {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-secondary);
-        }
-
-        .empty-state .icon {
-            font-size: 64px;
-            margin-bottom: 16px;
-        }
-
-        /* Responsive */
-        @media (max-width: 1024px) {
-            .transaction-container {
-                grid-template-columns: 1fr;
-            }
-
-            .transaction-sidebar {
-                position: relative;
-                top: 0;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="styles/transactions.css">
 </head>
 <body>
     <!-- Navigation -->
@@ -587,16 +71,24 @@
                             <!-- Recipient Details -->
                             <div class="form-group">
                                 <label for="recipient-email">Recipient Email or Phone</label>
-                                <input 
-                                    type="text" 
-                                    id="recipient-email" 
-                                    placeholder="Enter email or phone number"
-                                    required
-                                >
+                                <div class="recipient-input-wrapper">
+                                    <input 
+                                        type="text" 
+                                        id="recipient-email" 
+                                        placeholder="Enter email or phone number"
+                                        required
+                                    >
+                                    <span id="search-loading" class="search-loading">🔍</span>
+                                </div>
                                 <span class="form-hint">We'll verify the recipient exists</span>
                                 
+                                <div id="recipient-error" class="recipient-error">
+                                    ❌ Recipient not found
+                                </div>
+                                
                                 <div id="recipient-found" class="recipient-found">
-                                    <div class="recipient-avatar">👤</div>
+                                    <span class="recipient-checkmark">✓</span>
+                                    <div class="recipient-avatar" id="recipient-avatar">👤</div>
                                     <div class="recipient-info">
                                         <h4 id="recipient-name">-</h4>
                                         <p id="recipient-id">-</p>
@@ -651,37 +143,68 @@
                                 </h3>
                             </div>
 
+                            <!-- Progress Bar -->
+                            <div class="verification-progress">
+                                <div id="progress-fill" class="progress-fill"></div>
+                            </div>
+
+                            <!-- Verification Steps -->
                             <div class="verification-steps">
-                                <div class="verification-step" data-step="fraud">
+                                <div class="verification-step" data-step="recipient">
                                     <div class="step-number">Step 1</div>
+                                    <div class="step-name">Recipient</div>
+                                </div>
+                                <div class="verification-step" data-step="fraud">
+                                    <div class="step-number">Step 2</div>
                                     <div class="step-name">Fraud Check</div>
                                 </div>
                                 <div class="verification-step" data-step="liveness">
-                                    <div class="step-number">Step 2</div>
-                                    <div class="step-name">Liveness Test</div>
+                                    <div class="step-number">Step 3</div>
+                                    <div class="step-name">Liveness</div>
                                 </div>
                                 <div class="verification-step" data-step="face">
-                                    <div class="step-number">Step 3</div>
+                                    <div class="step-number">Step 4</div>
                                     <div class="step-name">Face Match</div>
                                 </div>
                                 <div class="verification-step" data-step="complete">
-                                    <div class="step-number">Step 4</div>
+                                    <div class="step-number">Step 5</div>
                                     <div class="step-name">Complete</div>
                                 </div>
                             </div>
 
+                            <!-- Step Results Container -->
+                            <div id="step-results"></div>
+
+                            <!-- Demo Notice -->
+                            <div class="demo-notice">
+                                <span>⚠️</span>
+                                <span><strong>Demo Mode:</strong> Liveness detection is simulated. Production version uses AI-powered face analysis.</span>
+                            </div>
+
+                            <!-- Camera View -->
                             <div id="camera-view">
                                 <video id="camera-video" autoplay playsinline></video>
                                 <canvas id="camera-canvas" style="display: none;"></canvas>
-                                <div class="camera-overlay"></div>
+                                <div id="camera-overlay" class="camera-overlay"></div>
+                                <div id="face-status">Initializing camera...</div>
+                                <div id="challenge-overlay">
+                                    <div id="challenge-text"></div>
+                                    <div id="challenge-progress"></div>
+                                    <div id="challenge-timer"></div>
+                                </div>
                                 <div id="liveness-instruction" class="liveness-instruction">
                                     Position your face in the circle
                                 </div>
                             </div>
 
+                            <!-- Captured Frames -->
+                            <div id="captured-frames"></div>
+
+                            <!-- Verification Message -->
                             <div id="verification-message" style="text-align: center; padding: 20px;"></div>
 
-                            <div style="display: flex; gap: 12px; justify-content: center;">
+                            <!-- Action Buttons -->
+                            <div class="verification-actions">
                                 <button id="start-verification-btn" class="btn btn-primary" onclick="startVerification()">
                                     Start Verification
                                 </button>
