@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - FacePay</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/admin.css">
+</head>
+<body>
+    <div id="admin-page" class="page active">
+        <!-- Admin Navbar -->
+        <nav class="navbar">
+            <div class="navbar-content">
+                <div class="navbar-brand">
+                    <div class="logo">
+                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                            <rect width="32" height="32" rx="8" fill="url(#gradient)"/>
+                            <path d="M16 8L20 14H12L16 8Z" fill="white" opacity="0.9"/>
+                            <path d="M16 24L12 18H20L16 24Z" fill="white" opacity="0.9"/>
+                            <defs>
+                                <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32">
+                                    <stop offset="0%" stop-color="#6366f1"/>
+                                    <stop offset="100%" stop-color="#8b5cf6"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <span>FacePay Admin</span>
+                    </div>
+                </div>
+                <div class="navbar-menu">
+                    <a href="#overview" class="nav-link active" onclick="showAdminSection('overview')">Overview</a>
+                    <a href="#users" class="nav-link" onclick="showAdminSection('users')">Users</a>
+                    <a href="#transactions" class="nav-link" onclick="showAdminSection('transactions')">Transactions</a>
+                    <a href="#user-reports" class="nav-link" onclick="showAdminSection('user-reports')">User Reports</a>
+                    <a href="#fraud" class="nav-link" onclick="showAdminSection('fraud')">Fraud Detection</a>
+                    <a href="#reports" class="nav-link" onclick="showAdminSection('reports')">System Reports</a>
+                    <a href="#analytics" class="nav-link" onclick="showAdminSection('analytics')">Analytics</a>
+                </div>
+                <div class="navbar-actions">
+                    <span class="user-name">Admin</span>
+                    <button class="btn btn-sm btn-danger" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Admin Dashboard Container -->
+        <div class="admin-container">
+            <!-- Overview Section -->
+            <div id="overview-section" class="admin-section active">
+                <div class="admin-header">
+                    <h1>Dashboard Overview</h1>
+                    <p class="admin-subtitle">System performance and statistics</p>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-row">
+                    <div class="stat-card-large">
+                        <div class="stat-card-header">
+                            <span class="stat-icon">👥</span>
+                            <span class="stat-trend up">+0%</span>
+                        </div>
+                        <div class="stat-card-body">
+                            <h3 class="stat-value" id="total-users">0</h3>
+                            <p class="stat-label">Total Users</p>
+                            <p class="stat-sublabel">Active this month</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-large">
+                        <div class="stat-card-header">
+                            <span class="stat-icon">💸</span>
+                            <span class="stat-trend up">+0%</span>
+                        </div>
+                        <div class="stat-card-body">
+                            <h3 class="stat-value" id="total-transactions">0</h3>
+                            <p class="stat-label">Total Transactions</p>
+                            <p class="stat-sublabel">Last 30 days</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-large">
+                        <div class="stat-card-header">
+                            <span class="stat-icon">💰</span>
+                            <span class="stat-trend up">+0%</span>
+                        </div>
+                        <div class="stat-card-body">
+                            <h3 class="stat-value" id="total-volume">₹0.00</h3>
+                            <p class="stat-label">Transaction Volume</p>
+                            <p class="stat-sublabel">This month</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-large danger">
+                        <div class="stat-card-header">
+                            <span class="stat-icon">⚠️</span>
+                            <span class="stat-trend down">-0%</span>
+                        </div>
+                        <div class="stat-card-body">
+                            <h3 class="stat-value" id="fraud-blocked">0</h3>
+                            <p class="stat-label">Fraud Blocked</p>
+                            <p class="stat-sublabel">This week</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Performance -->
+                <div class="admin-grid">
+                    <div class="admin-card">
+                        <div class="card-header">
+                            <h3>System Performance</h3>
+                            <span class="badge badge-success">Online</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="performance-metric">
+                                <div class="metric-label">
+                                    <span>Face Verification API</span>
+                                    <span class="metric-value" id="face-api-uptime">0%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="face-api-progress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="metric-label">
+                                    <span>Fraud Detection Engine</span>
+                                    <span class="metric-value" id="fraud-engine-uptime">0%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="fraud-engine-progress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="metric-label">
+                                    <span>Database Response</span>
+                                    <span class="metric-value" id="database-uptime">0%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="database-progress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="metric-label">
+                                    <span>API Uptime</span>
+                                    <span class="metric-value" id="api-uptime">0%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill success" id="api-progress" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-card">
+                        <div class="card-header">
+                            <h3>Recent Activity</h3>
+                            <button class="btn btn-sm btn-ghost">View All</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="activity-list" id="activity-list">
+                                <div class="empty-state">
+                                    <span class="empty-icon">📭</span>
+                                    <p>No recent activity</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Dashboard Preview -->
+                <div class="admin-card">
+                    <div class="card-header">
+                        <h3>Live Transaction Monitor</h3>
+                        <span class="live-indicator">
+                            <span class="pulse-dot"></span>
+                            Live
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div id="live-transactions-container">
+                            <div class="empty-state">
+                                <span class="empty-icon">📊</span>
+                                <p>No transactions to display</p>
+                                <small style="color: var(--text-tertiary); font-size: 0.875rem;">Real-time transactions will appear here</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="users-section" class="admin-section">
+                <div class="admin-header">
+                    <h1>User Management</h1>
+                    <p class="admin-subtitle">Manage registered users and accounts</p>
+                </div>
+                <div class="admin-card">
+                    <div class="card-body">
+                        <p class="empty-message">User management interface coming soon...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transactions Section -->
+            <div id="transactions-section" class="admin-section">
+                <div class="admin-header">
+                    <h1>Transaction History</h1>
+                    <p class="admin-subtitle">View all platform transactions</p>
+                </div>
+                <div class="admin-card">
+                    <div class="card-body">
+                        <p class="empty-message">Transaction history coming soon...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Reports Section -->
+            <div id="user-reports-section" class="admin-section">
+                <div class="admin-header">
+                    <h1>User Submitted Reports</h1>
+                    <p class="admin-subtitle">Review fraud reports and security concerns from users</p>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-row" style="margin-bottom: var(--space-xl);">
+                    <div class="stat-card-large">
+                        <div class="stat-card-header">
+                            <span class="stat-icon">📋</span>
+                        </div>
+                        <div class="stat-card-body">
+                            <h3 class="stat-value" id="total-user-reports">0</h3>
+                            <p class="stat-label">Total Reports</p>
+                            <p class="stat-sublabel">All time</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-large warning">
+                        <div class="stat-card-header">
+                            <span class="stat-icon">⏳</span>
+                        </div>
+                        <div class="stat-card-body">
+                            <h3 class="stat-value" id="pending-user-reports">0</h3>
+                            <p class="stat-label">Pending Review</p>
+                            <p class="stat-sublabel">Needs attention</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-large">
+                        <div class="stat-card-header">
+                            <span class="stat-icon">✓</span>
+                        </div>
+                        <div class="stat-card-body">
+                            <h3 class="stat-value" id="resolved-user-reports">0</h3>
+                            <p class="stat-label">Resolved</p>
+                            <p class="stat-sublabel">This month</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Table -->
+                <div class="admin-card">
+                    <div class="card-header">
+                        <h3>Submitted Reports</h3>
+                        <div class="filter-buttons">
+                            <button class="btn btn-sm" onclick="filterUserReports('all')">All</button>
+                            <button class="btn btn-sm" onclick="filterUserReports('pending')">Pending</button>
+                            <button class="btn btn-sm" onclick="filterUserReports('under-review')">Under Review</button>
+                            <button class="btn btn-sm" onclick="filterUserReports('resolved')">Resolved</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="reports-table-container">
+                            <table class="reports-table">
+                                <thead>
+                                    <tr>
+                                        <th>Reference</th>
+                                        <th>Type</th>
+                                        <th>Submitted By</th>
+                                        <th>Date</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-reports-tbody">
+                                    <tr>
+                                        <td colspan="7">
+                                            <div class="empty-state">
+                                                <span class="empty-icon">📝</span>
+                                                <p>No user reports submitted yet</p>
+                                                <small>Reports submitted through the website will appear here</small>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fraud Detection Section -->
+            <div id="fraud-section" class="admin-section">
+                <div class="admin-header">
+                    <h1>Fraud Detection</h1>
+                    <p class="admin-subtitle">Monitor and manage fraud alerts</p>
+                </div>
+                <div class="admin-card">
+                    <div class="card-body">
+                        <p class="empty-message">Fraud detection interface coming soon...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Section -->
+            <div id="reports-section" class="admin-section">
+                <div class="admin-header">
+                    <h1>Reports & Downloads</h1>
+                    <p class="admin-subtitle">Generate and export system reports</p>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="stats-row" style="margin-bottom: var(--space-xl);">
+                    <div class="stat-card-large">
+                        <div class="stat-card-header">
+                            <span class="stat-icon">📊</span>
+                        </div>
+                        <div class="stat-card-body">
+                            <h3 class="stat-value" id="reports-generated">0</h3>
+                            <p class="stat-label">Reports Generated</p>
+                            <p class="stat-sublabel">This month</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-large">
+                        <div class="stat-card-header">
+                            <span class="stat-icon">📥</span>
+                        </div>
+                        <div class="stat-card-body">
+                            <h3 class="stat-value" id="reports-downloaded">0</h3>
+                            <p class="stat-label">Downloads</p>
+                            <p class="stat-sublabel">Last 30 days</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card-large">
+                        <div class="stat-card-header">
+                            <span class="stat-icon">📅</span>
+                        </div>
+                        <div class="stat-card-body">
+                            <h3 class="stat-value" id="last-report-date">Never</h3>
+                            <p class="stat-label">Last Generated</p>
+                            <p class="stat-sublabel">Most recent report</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Types -->
+                <div class="admin-card" style="margin-bottom: var(--space-xl);">
+                    <div class="card-header">
+                        <h3>Generate Reports</h3>
+                        <span class="badge badge-info">Select Type</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="reports-grid">
+                            <!-- Transaction Report -->
+                            <div class="report-card">
+                                <div class="report-icon">💸</div>
+                                <h4 class="report-title">Transaction Report</h4>
+                                <p class="report-description">
+                                    Detailed report of all transactions including amounts, timestamps, users, and status
+                                </p>
+                                <div class="report-options">
+                                    <label class="report-label">Date Range</label>
+                                    <select class="report-select" id="transaction-report-range">
+                                        <option value="today">Today</option>
+                                        <option value="week">Last 7 Days</option>
+                                        <option value="month" selected>Last 30 Days</option>
+                                        <option value="quarter">Last 90 Days</option>
+                                        <option value="year">Last Year</option>
+                                        <option value="custom">Custom Range</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary btn-block" onclick="generateReport('transaction')">
+                                    Generate Report
+                                </button>
+                            </div>
+
+                            <!-- User Activity Report -->
+                            <div class="report-card">
+                                <div class="report-icon">👥</div>
+                                <h4 class="report-title">User Activity Report</h4>
+                                <p class="report-description">
+                                    User registrations, logins, active users, and account status summary
+                                </p>
+                                <div class="report-options">
+                                    <label class="report-label">Date Range</label>
+                                    <select class="report-select" id="user-report-range">
+                                        <option value="today">Today</option>
+                                        <option value="week">Last 7 Days</option>
+                                        <option value="month" selected>Last 30 Days</option>
+                                        <option value="quarter">Last 90 Days</option>
+                                        <option value="year">Last Year</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary btn-block" onclick="generateReport('user')">
+                                    Generate Report
+                                </button>
+                            </div>
+
+                            <!-- Fraud Detection Report -->
+                            <div class="report-card">
+                                <div class="report-icon">⚠️</div>
+                                <h4 class="report-title">Fraud Detection Report</h4>
+                                <p class="report-description">
+                                    Suspicious activities, blocked transactions, and fraud prevention metrics
+                                </p>
+                                <div class="report-options">
+                                    <label class="report-label">Date Range</label>
+                                    <select class="report-select" id="fraud-report-range">
+                                        <option value="today">Today</option>
+                                        <option value="week">Last 7 Days</option>
+                                        <option value="month" selected>Last 30 Days</option>
+                                        <option value="quarter">Last 90 Days</option>
+                                        <option value="year">Last Year</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary btn-block" onclick="generateReport('fraud')">
+                                    Generate Report
+                                </button>
+                            </div>
+
+                            <!-- Financial Summary Report -->
+                            <div class="report-card">
+                                <div class="report-icon">💰</div>
+                                <h4 class="report-title">Financial Summary</h4>
+                                <p class="report-description">
+                                    Total volume, average transaction amounts, daily/monthly breakdown
+                                </p>
+                                <div class="report-options">
+                                    <label class="report-label">Date Range</label>
+                                    <select class="report-select" id="financial-report-range">
+                                        <option value="week">Last 7 Days</option>
+                                        <option value="month" selected>Last 30 Days</option>
+                                        <option value="quarter">Last 90 Days</option>
+                                        <option value="year">Last Year</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary btn-block" onclick="generateReport('financial')">
+                                    Generate Report
+                                </button>
+                            </div>
+
+                            <!-- Face Verification Report -->
+                            <div class="report-card">
+                                <div class="report-icon">📸</div>
+                                <h4 class="report-title">Face Verification Report</h4>
+                                <p class="report-description">
+                                    Verification attempts, success/failure rates, and liveness detection stats
+                                </p>
+                                <div class="report-options">
+                                    <label class="report-label">Date Range</label>
+                                    <select class="report-select" id="face-report-range">
+                                        <option value="today">Today</option>
+                                        <option value="week">Last 7 Days</option>
+                                        <option value="month" selected>Last 30 Days</option>
+                                        <option value="quarter">Last 90 Days</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary btn-block" onclick="generateReport('face')">
+                                    Generate Report
+                                </button>
+                            </div>
+
+                            <!-- System Performance Report -->
+                            <div class="report-card">
+                                <div class="report-icon">🔧</div>
+                                <h4 class="report-title">System Performance</h4>
+                                <p class="report-description">
+                                    API uptime, response times, error rates, and system health metrics
+                                </p>
+                                <div class="report-options">
+                                    <label class="report-label">Date Range</label>
+                                    <select class="report-select" id="performance-report-range">
+                                        <option value="today">Today</option>
+                                        <option value="week">Last 7 Days</option>
+                                        <option value="month" selected>Last 30 Days</option>
+                                        <option value="quarter">Last 90 Days</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-primary btn-block" onclick="generateReport('performance')">
+                                    Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Reports -->
+                <div class="admin-card">
+                    <div class="card-header">
+                        <h3>Recent Reports</h3>
+                        <button class="btn btn-sm btn-ghost" onclick="clearReportHistory()">Clear History</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="reports-table-container">
+                            <table class="reports-table" id="recent-reports-table">
+                                <thead>
+                                    <tr>
+                                        <th>Report Type</th>
+                                        <th>Date Range</th>
+                                        <th>Generated</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reports-tbody">
+                                    <tr>
+                                        <td colspan="5">
+                                            <div class="empty-state" style="padding: var(--space-xl);">
+                                                <span class="empty-icon" style="font-size: 2rem;">📋</span>
+                                                <p>No reports generated yet</p>
+                                                <small>Generate your first report above</small>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="admin-card">
+                    <div class="card-header">
+                        <h3>Export Options</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="export-options-grid">
+                            <div class="export-option">
+                                <div class="export-icon">📄</div>
+                                <h4>PDF Export</h4>
+                                <p>Formatted PDF with charts and tables</p>
+                            </div>
+                            <div class="export-option">
+                                <div class="export-icon">📊</div>
+                                <h4>Excel Export</h4>
+                                <p>Spreadsheet format for data analysis</p>
+                            </div>
+                            <div class="export-option">
+                                <div class="export-icon">📝</div>
+                                <h4>CSV Export</h4>
+                                <p>Comma-separated values for import</p>
+                            </div>
+                            <div class="export-option">
+                                <div class="export-icon">📋</div>
+                                <h4>JSON Export</h4>
+                                <p>Raw data in JSON format</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Section -->
+            <div id="analytics-section" class="admin-section">
+                <div class="admin-header">
+                    <h1>Analytics & Reports</h1>
+                    <p class="admin-subtitle">Platform insights and trends</p>
+                </div>
+                <div class="admin-card">
+                    <div class="card-body">
+                        <p class="empty-message">Analytics dashboard coming soon...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

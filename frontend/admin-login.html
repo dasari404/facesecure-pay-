@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - FacePay</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/auth.css">
+</head>
+<body>
+    <!-- Admin Login Page -->
+    <div id="admin-login-page" class="page active">
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <div class="logo-icon">🔐</div>
+                    <h1>Admin Login</h1>
+                    <p>Access the admin dashboard</p>
+                </div>
+
+                <form id="admin-login-form" class="auth-form">
+                    <div class="alert alert-error" id="admin-login-error" style="display: none;"></div>
+
+                    <div class="form-group">
+                        <label for="admin-username">Admin Username</label>
+                        <input 
+                            type="text" 
+                            id="admin-username" 
+                            name="username"
+                            placeholder="Enter admin username"
+                            required
+                            autocomplete="username"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="admin-password">Password</label>
+                        <input 
+                            type="password" 
+                            id="admin-password" 
+                            name="password"
+                            placeholder="Enter admin password"
+                            required
+                            autocomplete="current-password"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="remember-me">
+                            <span>Remember me</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <span id="admin-login-btn-text">Sign In to Dashboard</span>
+                        <span id="admin-login-spinner" class="loading-spinner" style="display: none;"></span>
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    <p>Need help? Contact system administrator</p>
+                    <a href="index.html">← Back to User Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        // Admin Login Handler
+        document.getElementById('admin-login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('admin-username').value;
+            const password = document.getElementById('admin-password').value;
+            const rememberMe = document.getElementById('remember-me').checked;
+            const errorDiv = document.getElementById('admin-login-error');
+            const btnText = document.getElementById('admin-login-btn-text');
+            const spinner = document.getElementById('admin-login-spinner');
+            
+            // Hide error
+            errorDiv.style.display = 'none';
+            
+            // Show loading
+            btnText.style.display = 'none';
+            spinner.style.display = 'inline-block';
+            
+            try {
+                const response = await apiCall(API.ADMIN_LOGIN, {
+                    method: 'POST',
+                    body: { username, password }
+                });
+                
+                if (response.success) {
+                    // Store admin token and data
+                    localStorage.setItem('facepay_admin_token', response.token);
+                    localStorage.setItem('facepay_admin', JSON.stringify(response.admin));
+                    
+                    // Redirect to admin dashboard
+                    window.location.href = 'admin.html';
+                } else {
+                    throw new Error(response.message || 'Login failed');
+                }
+                
+                // TODO: Remove this demo authentication and implement real API
+                if (username === 'admin' && password === 'admin123') {
+                    // Store auth token
+                    const authData = {
+                        token: 'admin_' + Date.now(),
+                        username: username,
+                        role: 'admin',
+                        loginTime: new Date().toISOString()
+                    };
+                    
+                    if (rememberMe) {
+                        localStorage.setItem('adminAuthToken', authData.token);
+                        localStorage.setItem('adminData', JSON.stringify(authData));
+                    } else {
+                        sessionStorage.setItem('adminAuthToken', authData.token);
+                        sessionStorage.setItem('adminData', JSON.stringify(authData));
+                    }
+                    
+                    // Success - redirect to admin dashboard
+                    window.location.href = 'admin.html';
+                } else {
+                    throw new Error('Invalid admin credentials');
+                }
+            } catch (error) {
+                // Show error
+                errorDiv.textContent = error.message || 'Login failed. Please check your credentials.';
+                errorDiv.style.display = 'flex';
+                
+                // Reset button
+                btnText.style.display = 'inline';
+                spinner.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
