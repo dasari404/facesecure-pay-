@@ -73,6 +73,8 @@ CREATE TABLE transactions (
   face_verified BOOLEAN DEFAULT FALSE,
   liveness_verified BOOLEAN DEFAULT FALSE,
   verification_time DECIMAL(5, 2),
+  liveness_score DECIMAL(5, 2) DEFAULT NULL,
+  verification_attempts INT DEFAULT 0,
   fraud_check_passed BOOLEAN DEFAULT TRUE,
   fraud_score INT DEFAULT 0,
   fraud_check_result VARCHAR(20),

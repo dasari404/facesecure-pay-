@@ -439,9 +439,25 @@ router.post('/verify', verifyToken, [
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
     console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    res.status(500).json({ 
+    
+    // Return safe error message based on error type
+    let errorMessage = 'An unexpected error occurred during verification';
+    let statusCode = 500;
+    
+    if (error.code === 'ER_DUP_ENTRY') {
+      errorMessage = 'Transaction already processed';
+      statusCode = 409;
+    } else if (error.code === 'ER_LOCK_WAIT_TIMEOUT') {
+      errorMessage = 'Transaction is being processed. Please try again.';
+      statusCode = 503;
+    } else if (error.message && error.message.includes('balance')) {
+      errorMessage = 'Insufficient balance to complete transaction';
+      statusCode = 400;
+    }
+    
+    res.status(statusCode).json({ 
       success: false, 
-      message: 'Verification failed' 
+      message: errorMessage
     });
   }
 });
