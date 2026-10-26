@@ -239,16 +239,32 @@ router.post('/verify', verifyToken, [
   body('faceVerified').isBoolean(),
   body('livenessScore').optional().isFloat({ min: 0, max: 100 })
 ], async (req, res) => {
+  console.log('=== VERIFICATION REQUEST START ===');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('User ID from token:', req.user?.id);
+  console.log('User details:', JSON.stringify(req.user, null, 2));
+  
   try {
     const { transactionId, faceVerified, livenessScore, verificationData } = req.body;
     
+    console.log('Parsed request data:', {
+      transactionId,
+      faceVerified,
+      livenessScore,
+      verificationData
+    });
+    
     // Get transaction
+    console.log('Querying transaction with:', { transactionId, userId: req.user.id });
     const [transactions] = await db.query(
       'SELECT * FROM transactions WHERE transaction_id = ? AND sender_id = ?',
       [transactionId, req.user.id]
     );
     
+    console.log('Transaction query result:', JSON.stringify(transactions, null, 2));
+    
     if (transactions.length === 0) {
+      console.log('ERROR: Transaction not found');
       return res.status(404).json({ 
         success: false, 
         message: 'Transaction not found' 
@@ -256,9 +272,12 @@ router.post('/verify', verifyToken, [
     }
     
     const transaction = transactions[0];
+    console.log('Transaction found:', JSON.stringify(transaction, null, 2));
     
     // Check if transaction is still pending
+    console.log('Checking transaction status:', transaction.status);
     if (transaction.status !== 'pending') {
+      console.log('ERROR: Transaction not pending');
       return res.status(400).json({ 
         success: false, 
         message: `Transaction is already ${transaction.status}` 
@@ -266,7 +285,9 @@ router.post('/verify', verifyToken, [
     }
     
     // Check if fraud check passed
+    console.log('Fraud check passed flag:', transaction.fraud_check_passed);
     if (transaction.fraud_check_passed === 0) {
+      console.log('ERROR: Transaction failed fraud check');
       return res.status(400).json({ 
         success: false, 
         message: 'Transaction failed fraud check' 
@@ -277,7 +298,15 @@ router.post('/verify', verifyToken, [
     const livenessThreshold = 60;
     const verificationPassed = faceVerified && (livenessScore >= livenessThreshold);
     
+    console.log('Verification check:', {
+      faceVerified,
+      livenessScore,
+      livenessThreshold,
+      verificationPassed
+    });
+    
     if (!verificationPassed) {
+      console.log('ERROR: Verification criteria not met');
       // Increment verification attempts
       await db.query(
         'UPDATE transactions SET verification_attempts = verification_attempts + 1, status = "failed" WHERE id = ?',
@@ -293,19 +322,26 @@ router.post('/verify', verifyToken, [
       });
     }
     
+    console.log('Verification passed, starting database transaction...');
+    
     // Start database transaction for atomic balance update
     const connection = await db.getConnection();
     
     try {
+      console.log('Beginning database transaction...');
       await connection.beginTransaction();
       
       // Lock the transaction row to prevent concurrent verification
+      console.log('Acquiring transaction lock...');
       const [transactions] = await connection.query(
         'SELECT * FROM transactions WHERE transaction_id = ? AND sender_id = ? FOR UPDATE',
         [transactionId, req.user.id]
       );
       
+      console.log('Lock acquired, transactions:', JSON.stringify(transactions, null, 2));
+      
       if (transactions.length === 0) {
+        console.log('ERROR: Transaction not found after lock');
         await connection.rollback();
         connection.release();
         return res.status(404).json({ 
@@ -317,7 +353,9 @@ router.post('/verify', verifyToken, [
       const lockedTransaction = transactions[0];
       
       // Double-check status after acquiring lock
+      console.log('Locked transaction status:', lockedTransaction.status);
       if (lockedTransaction.status !== 'pending') {
+        console.log('ERROR: Transaction status changed after lock');
         await connection.rollback();
         connection.release();
         return res.status(400).json({ 
@@ -327,18 +365,21 @@ router.post('/verify', verifyToken, [
       }
       
       // Deduct from sender
+      console.log('Deducting from sender:', { amount: transaction.amount, senderId: transaction.sender_id });
       await connection.query(
         'UPDATE users SET balance = balance - ? WHERE id = ?',
         [transaction.amount, transaction.sender_id]
       );
       
       // Add to recipient
+      console.log('Adding to recipient:', { amount: transaction.amount, recipientId: transaction.recipient_id });
       await connection.query(
         'UPDATE users SET balance = balance + ? WHERE id = ?',
         [transaction.amount, transaction.recipient_id]
       );
       
       // Update transaction as completed
+      console.log('Updating transaction status to completed...');
       await connection.query(`
         UPDATE transactions 
         SET status = 'completed', 
@@ -349,9 +390,11 @@ router.post('/verify', verifyToken, [
         WHERE id = ?
       `, [livenessScore || 0, transaction.id]);
       
+      console.log('Committing transaction...');
       await connection.commit();
       
       // Get updated balances
+      console.log('Fetching updated balances...');
       const [[senderUpdated]] = await connection.query(
         'SELECT balance FROM users WHERE id = ?',
         [transaction.sender_id]
@@ -362,8 +405,14 @@ router.post('/verify', verifyToken, [
         [transaction.recipient_id]
       );
       
+      console.log('Updated balances:', {
+        senderBalance: senderUpdated?.balance,
+        recipientBalance: recipientUpdated?.balance
+      });
+      
       connection.release();
       
+      console.log('=== VERIFICATION SUCCESS ===');
       res.json({
         success: true,
         message: 'Transaction completed successfully',
@@ -378,13 +427,18 @@ router.post('/verify', verifyToken, [
       });
       
     } catch (txError) {
+      console.error('DATABASE TRANSACTION ERROR:', txError);
+      console.error('Stack trace:', txError.stack);
       await connection.rollback();
       connection.release();
       throw txError;
     }
     
   } catch (error) {
-    console.error('Transaction verification error:', error);
+    console.error('=== VERIFICATION ERROR ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     res.status(500).json({ 
       success: false, 
       message: 'Verification failed' 
