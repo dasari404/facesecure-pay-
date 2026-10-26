@@ -24,10 +24,12 @@ CREATE TABLE admins (
 -- Users table
 CREATE TABLE users (
   id INT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(50) UNIQUE,
   email VARCHAR(100) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   full_name VARCHAR(100) NOT NULL,
   phone VARCHAR(20),
+  payment_number VARCHAR(10) UNIQUE NOT NULL,
   balance DECIMAL(12, 2) DEFAULT 0.00,
   is_verified BOOLEAN DEFAULT FALSE,
   face_registered BOOLEAN DEFAULT FALSE,
@@ -37,7 +39,9 @@ CREATE TABLE users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   last_login TIMESTAMP NULL,
+  INDEX idx_username (username),
   INDEX idx_email (email),
+  INDEX idx_payment_number (payment_number),
   INDEX idx_account_status (account_status),
   INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

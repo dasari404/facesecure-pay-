@@ -33,6 +33,11 @@
                     <div class="user-avatar" id="user-avatar">👤</div>
                     <div class="user-name" id="user-name">Loading...</div>
                     <div class="user-email" id="user-email"></div>
+                    <div class="user-payment-number" id="user-payment-number">
+                        <span class="payment-label">Payment Number</span>
+                        <span class="payment-value" id="payment-number-value">-</span>
+                        <button class="copy-btn" id="copy-payment-number" title="Copy payment number">📋</button>
+                    </div>
                 </div>
 
                 <div class="balance-widget">
@@ -70,20 +75,23 @@
                         <form id="send-money-form" class="send-money-form">
                             <!-- Recipient Details -->
                             <div class="form-group">
-                                <label for="recipient-email">Recipient Email or Phone</label>
+                                <label for="recipient-email">Recipient Payment Number</label>
                                 <div class="recipient-input-wrapper">
                                     <input 
                                         type="text" 
                                         id="recipient-email" 
-                                        placeholder="Enter email or phone number"
+                                        placeholder="Enter 10-digit payment number"
                                         required
+                                        pattern="\d{10}"
+                                        maxlength="10"
+                                        inputmode="numeric"
                                     >
                                     <span id="search-loading" class="search-loading">🔍</span>
                                 </div>
-                                <span class="form-hint">We'll verify the recipient exists</span>
+                                <span class="form-hint">Enter the 10-digit payment number</span>
                                 
                                 <div id="recipient-error" class="recipient-error">
-                                    ❌ Recipient not found
+                                    ❌ Payment number not found
                                 </div>
                                 
                                 <div id="recipient-found" class="recipient-found">

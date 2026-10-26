@@ -160,7 +160,8 @@ router.get('/activity', verifyToken, verifyAdmin, async (req, res) => {
         t.status,
         t.created_at,
         u.full_name as user_name,
-        u.email as user_email
+        u.email as user_email,
+        u.payment_number as user_payment_number
       FROM transactions t
       JOIN users u ON t.sender_id = u.id
       ORDER BY t.created_at DESC

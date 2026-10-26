@@ -14,7 +14,7 @@ function generateTransactionId() {
 
 // Create new transaction (send money)
 router.post('/send', verifyToken, [
-  body('recipientEmail').isEmail().normalizeEmail(),
+  body('recipientIdentifier').trim().isLength({ min: 1 }),
   body('amount').isFloat({ min: 1.00 }),
   body('description').optional().trim().isLength({ max: 500 }),
   body('transactionType').optional().isIn(['personal', 'business', 'bill'])
@@ -29,19 +29,62 @@ router.post('/send', verifyToken, [
       });
     }
     
-    const { recipientEmail, amount, description, transactionType } = req.body;
+    const { recipientIdentifier, amount, description, transactionType } = req.body;
     const senderId = req.user.id;
     
-    // Check if recipient exists
-    const [recipients] = await db.query(
-      'SELECT id, full_name, email FROM users WHERE email = ?',
-      [recipientEmail]
-    );
+    // Normalize identifier for search
+    const normalizedIdentifier = recipientIdentifier.trim().toLowerCase();
+    const normalizedPhone = recipientIdentifier.replace(/[\s\-\+\(\)]/g, '');
+    const isNumeric = /^\d+$/.test(recipientIdentifier.trim());
+    
+    // Check if it's a 10-digit payment number
+    const isPaymentNumber = isNumeric && recipientIdentifier.trim().length === 10;
+    
+    let recipients;
+    
+    if (isPaymentNumber) {
+      // Search by payment number
+      [recipients] = await db.query(`
+        SELECT id, username, full_name, email 
+        FROM users 
+        WHERE payment_number = ?
+        AND account_status = 'active'
+        LIMIT 1
+      `, [recipientIdentifier.trim()]);
+    } else {
+      // Search by username, email, phone, or user ID (backward compatibility)
+      const userId = isNumeric ? parseInt(recipientIdentifier.trim(), 10) : null;
+      
+      [recipients] = await db.query(`
+        SELECT id, username, full_name, email 
+        FROM users 
+        WHERE (
+          LOWER(username) = ? 
+          OR LOWER(email) = ? 
+          OR REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), '(', '') LIKE ?
+          ${userId ? 'OR id = ?' : ''}
+        )
+        AND account_status = 'active'
+        LIMIT 2
+      `, userId 
+        ? [normalizedIdentifier, normalizedIdentifier, `%${normalizedPhone}%`, userId]
+        : [normalizedIdentifier, normalizedIdentifier, `%${normalizedPhone}%`]
+      );
+    }
     
     if (recipients.length === 0) {
       return res.status(404).json({ 
         success: false, 
-        message: 'Recipient not found' 
+        message: isPaymentNumber 
+          ? 'Recipient not found with this payment number.' 
+          : 'Recipient not found. Please use username, email, phone, payment number, or user ID.' 
+      });
+    }
+    
+    if (recipients.length > 1) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Multiple recipients found. Please be more specific.' 
       });
     }
     
@@ -87,7 +130,7 @@ router.post('/send', verifyToken, [
     // Generate transaction ID
     const transactionId = generateTransactionId();
     
-    // Create pending transaction
+    // Create pending transaction (store original identifier in recipient_email field for audit)
     const [result] = await db.query(`
       INSERT INTO transactions 
       (transaction_id, sender_id, recipient_id, recipient_email, amount, description, transaction_type, status)
@@ -96,7 +139,7 @@ router.post('/send', verifyToken, [
       transactionId,
       senderId,
       recipient.id,
-      recipientEmail,
+      recipientIdentifier, // Store original identifier for audit trail
       amount,
       description || null,
       transactionType || 'personal'
@@ -110,6 +153,7 @@ router.post('/send', verifyToken, [
       amount: parseFloat(amount),
       recipient: {
         id: recipient.id,
+        username: recipient.username,
         name: recipient.full_name,
         email: recipient.email
       },

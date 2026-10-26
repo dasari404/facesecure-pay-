@@ -20,7 +20,13 @@
 
                 <form id="register-form" class="auth-form">
                     <div class="alert alert-error" id="register-error" style="display: none;"></div>
-                    <div class="alert alert-success" id="register-success" style="display: none;"></div>
+                    <div class="alert alert-success" id="register-success" style="display: none;">
+                        <div id="payment-number-display" style="margin-top: 12px; display: none;">
+                            <strong>Your Payment Number:</strong> 
+                            <span id="generated-payment-number" style="font-size: 20px; font-family: 'Courier New', monospace; color: var(--accent-primary); letter-spacing: 2px;"></span>
+                            <p style="font-size: 12px; margin-top: 8px; opacity: 0.9;">Save this number - you'll need it to receive payments!</p>
+                        </div>
+                    </div>
 
                     <div class="form-group">
                         <label for="full-name">Full Name</label>
@@ -33,6 +39,22 @@
                             minlength="2"
                             autocomplete="name"
                         >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username"
+                            placeholder="Choose a unique username"
+                            required
+                            minlength="3"
+                            maxlength="30"
+                            pattern="[a-zA-Z0-9_]+"
+                            autocomplete="username"
+                        >
+                        <span class="form-hint">3-30 characters, letters, numbers, and underscores only</span>
                     </div>
 
                     <div class="form-group">
@@ -126,19 +148,29 @@
             e.preventDefault();
             
             const fullName = document.getElementById('full-name').value;
+            const username = document.getElementById('username').value;
             const email = document.getElementById('email').value;
             const phone = document.getElementById('phone').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
             const errorDiv = document.getElementById('register-error');
+            const successDiv = document.getElementById('register-success');
             const registerBtn = document.getElementById('register-btn');
             
             // Hide alerts
             errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
             
             // Validate passwords match
             if (password !== confirmPassword) {
                 errorDiv.textContent = 'Passwords do not match';
+                errorDiv.style.display = 'flex';
+                return;
+            }
+            
+            // Validate username format
+            if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+                errorDiv.textContent = 'Username must be 3-30 characters (letters, numbers, underscores only)';
                 errorDiv.style.display = 'flex';
                 return;
             }
@@ -150,8 +182,8 @@
                 return;
             }
             
-            // Validate phone if provided
-            if (phone && !isValidPhone(phone)) {
+            // Validate phone if provided (now optional)
+            if (phone && phone.trim() !== '' && !isValidPhone(phone)) {
                 errorDiv.textContent = 'Please enter a valid phone number';
                 errorDiv.style.display = 'flex';
                 return;
@@ -161,7 +193,38 @@
             setLoadingState(registerBtn, true);
             
             try {
-                await register(email, password, fullName, phone);
+                const response = await apiCall(API.REGISTER, {
+                    method: 'POST',
+                    body: {
+                        email,
+                        password,
+                        full_name: fullName,
+                        phone: phone || undefined,
+                        username
+                    }
+                });
+                
+                if (response.success) {
+                    // Store token and user data
+                    localStorage.setItem('facepay_token', response.token);
+                    localStorage.setItem('facepay_user', JSON.stringify(response.user));
+                    
+                    // Show success message with payment number
+                    successDiv.textContent = 'Registration successful! ';
+                    successDiv.style.display = 'flex';
+                    
+                    if (response.user.payment_number) {
+                        document.getElementById('generated-payment-number').textContent = response.user.payment_number;
+                        document.getElementById('payment-number-display').style.display = 'block';
+                    }
+                    
+                    // Redirect after 3 seconds
+                    setTimeout(() => {
+                        window.location.href = 'transactions.html';
+                    }, 3000);
+                } else {
+                    throw new Error(response.message || 'Registration failed');
+                }
             } catch (error) {
                 // Show error
                 errorDiv.textContent = error.message || 'Registration failed. Please try again.';

@@ -19,6 +19,7 @@ const API = {
     // User
     GET_USER_PROFILE: `${CONFIG.API_BASE_URL}/user/profile`,
     SEARCH_USER: `${CONFIG.API_BASE_URL}/user/search`,
+    GET_PAYMENT_NUMBER_USER: `${CONFIG.API_BASE_URL}/auth/payment-number`,
     
     // Transactions
     SEND_MONEY: `${CONFIG.API_BASE_URL}/transactions/send`,

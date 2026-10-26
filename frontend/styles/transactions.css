@@ -57,6 +57,48 @@
     color: var(--text-secondary);
 }
 
+.user-payment-number {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.payment-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.payment-value {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: var(--accent-primary);
+    letter-spacing: 2px;
+}
+
+.copy-btn {
+    background: rgba(99, 102, 241, 0.2);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.copy-btn:hover {
+    background: rgba(99, 102, 241, 0.3);
+}
+
 .balance-widget {
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
     border-radius: 12px;

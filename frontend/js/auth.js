@@ -1,7 +1,7 @@
 // Authentication Logic
 
 // Register new user
-async function register(email, password, fullName, phone) {
+async function register(email, password, fullName, phone, username) {
   try {
     const response = await apiCall(API.REGISTER, {
       method: 'POST',
@@ -9,7 +9,8 @@ async function register(email, password, fullName, phone) {
         email,
         password,
         full_name: fullName,
-        phone: phone || undefined
+        phone: phone || undefined,
+        username
       }
     });
     

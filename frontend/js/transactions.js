@@ -19,6 +19,27 @@ async function loadUserProfile() {
       document.getElementById('user-email').textContent = user.email;
       document.getElementById('sidebar-balance').textContent = user.balance.toFixed(2);
       
+      // Update payment number display
+      const paymentNumberEl = document.getElementById('payment-number-value');
+      if (paymentNumberEl && user.payment_number) {
+        paymentNumberEl.textContent = user.payment_number;
+        
+        // Add copy functionality
+        const copyBtn = document.getElementById('copy-payment-number');
+        if (copyBtn) {
+          copyBtn.addEventListener('click', function() {
+            navigator.clipboard.writeText(user.payment_number).then(() => {
+              copyBtn.textContent = '✓';
+              setTimeout(() => {
+                copyBtn.textContent = '📋';
+              }, 2000);
+            }).catch(err => {
+              console.error('Failed to copy:', err);
+            });
+          });
+        }
+      }
+      
       // Update avatar with first letter of name
       const avatarEl = document.getElementById('user-avatar');
       if (avatarEl) {
@@ -103,8 +124,8 @@ function displayTransactions(transactions) {
   }).join('');
 }
 
-// Search for recipient (debounced with enhanced UI feedback)
-function searchRecipient(email) {
+// Search for recipient by payment number (with validation)
+function searchRecipient(paymentNumber) {
   const inputEl = document.getElementById('recipient-email');
   const loadingEl = document.getElementById('search-loading');
   const errorEl = document.getElementById('recipient-error');
@@ -122,7 +143,28 @@ function searchRecipient(email) {
   errorEl.classList.remove('show');
   foundEl.classList.remove('show');
   
-  if (!email || email.length < 3) {
+  // Validate payment number format (exactly 10 digits)
+  if (!paymentNumber || paymentNumber.length === 0) {
+    return;
+  }
+  
+  // Check if it's not all digits
+  if (!/^\d+$/.test(paymentNumber)) {
+    inputEl.classList.add('input-invalid');
+    errorEl.textContent = '❌ Payment number must contain only digits';
+    errorEl.classList.add('show');
+    return;
+  }
+  
+  // Check length
+  if (paymentNumber.length < 10) {
+    return; // Wait for more input
+  }
+  
+  if (paymentNumber.length > 10) {
+    inputEl.classList.add('input-invalid');
+    errorEl.textContent = '❌ Payment number must be exactly 10 digits';
+    errorEl.classList.add('show');
     return;
   }
   
@@ -132,19 +174,19 @@ function searchRecipient(email) {
   // Debounce search
   recipientSearchTimeout = setTimeout(async () => {
     try {
-      const response = await apiCall(API.SEARCH_USER + `?query=${encodeURIComponent(email)}`, {
+      const response = await apiCall(API.GET_PAYMENT_NUMBER_USER + `?number=${encodeURIComponent(paymentNumber)}`, {
         method: 'GET'
       });
       
       loadingEl.classList.remove('show');
       
-      if (response.success && response.users && response.users.length > 0) {
-        const user = response.users[0];
+      if (response.success && response.user) {
+        const user = response.user;
         validatedRecipient = user;
         
         // Show success state
         inputEl.classList.add('input-valid');
-        document.getElementById('recipient-name').textContent = user.full_name;
+        document.getElementById('recipient-name').textContent = `${user.full_name} (@${user.username})`;
         document.getElementById('recipient-id').textContent = user.email;
         
         // Update avatar with first letter
@@ -155,12 +197,14 @@ function searchRecipient(email) {
       } else {
         // Show error state
         inputEl.classList.add('input-invalid');
+        errorEl.textContent = '❌ Payment number not found';
         errorEl.classList.add('show');
       }
     } catch (error) {
       console.error('Recipient search error:', error);
       loadingEl.classList.remove('show');
       inputEl.classList.add('input-invalid');
+      errorEl.textContent = '❌ Payment number not found';
       errorEl.classList.add('show');
     }
   }, 500);
@@ -170,7 +214,7 @@ function searchRecipient(email) {
 async function handleSendMoneySubmit(event) {
   event.preventDefault();
   
-  const recipientEmail = document.getElementById('recipient-email').value;
+  const paymentNumber = document.getElementById('recipient-email').value;
   const amount = parseFloat(document.getElementById('amount').value);
   const description = document.getElementById('description').value;
   const transactionType = document.getElementById('transaction-type').value;
@@ -182,7 +226,7 @@ async function handleSendMoneySubmit(event) {
     inputEl.classList.add('shake');
     setTimeout(() => inputEl.classList.remove('shake'), 500);
     
-    alert('Please enter a valid recipient email or phone number.');
+    alert('Please enter a valid 10-digit payment number.');
     return;
   }
   
@@ -190,7 +234,7 @@ async function handleSendMoneySubmit(event) {
     const response = await apiCall(API.SEND_MONEY, {
       method: 'POST',
       body: {
-        recipientEmail,
+        recipientIdentifier: paymentNumber,
         amount,
         description,
         transactionType

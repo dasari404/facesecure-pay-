@@ -3,34 +3,17 @@
   "findings": [
     {
       "id": "BLOCKER-1",
-      "severity": "critical",
-      "title": "JWT Secret Mismatch Between Signing and Verification",
-      "location": "backend/middleware/auth.js lines 15, 43",
-      "description": "Auth routes (backend/routes/auth.js) use fallback JWT secret 'facesecure-dev-secret-change-in-production' when process.env.JWT_SECRET is undefined, but middleware does not have this fallback. When JWT_SECRET is not set in .env, tokens are signed with the fallback but verified with undefined, causing all protected endpoints to fail with 401 errors.",
-      "consequence": "Users can register and login but cannot access any protected endpoints (profile, transactions). Entire transaction system is unusable without .env configuration.",
-      "triggeringPath": "User registers → receives token signed with fallback secret → calls GET /api/user/profile → verifyToken calls jwt.verify(token, undefined) → error → 401 response",
-      "requiredFix": "Add same fallback to middleware/auth.js line 15: const decoded = jwt.verify(token, process.env.JWT_SECRET || 'facesecure-dev-secret-change-in-production'); Also line 43 in optionalAuth function."
-    },
-    {
-      "id": "BLOCKER-2",
-      "severity": "critical",
-      "title": "Fraud Check Endpoint Route Mismatch",
-      "location": "backend/routes/transactions.js line 116, backend/server.js line 56, frontend/js/face-verification.js line 176",
-      "description": "Fraud check endpoint path is inconsistent. Router defines '/fraud/check', server registers with prefix '/api/fraud', resulting in actual path '/api/fraud/fraud/check'. Frontend calls '/api/fraud/check' expecting different path. Result: 404 Not Found during verification flow.",
-      "consequence": "Transaction verification fails at fraud check step. Users cannot complete transactions. Error message 'Fraud check failed' displayed to user.",
-      "triggeringPath": "User submits transaction → transaction created → startVerification() → runFraudCheck() calls POST /api/fraud/check → 404 → verification fails",
-      "requiredFix": "Option A (recommended): Change transactions.js line 116 to router.post('/check', ...) so /api/fraud/check works. Option B: Remove app.use('/api/fraud', ...) from server.js line 56 and update frontend to use /api/transactions/fraud/check."
-    },
-    {
-      "id": "BLOCKER-3",
-      "severity": "critical",
-      "title": "Insufficient Balance Check Does Not Account for Pending Transactions",
-      "location": "backend/routes/transactions.js lines 69-78",
-      "description": "Balance validation only checks current balance, not pending transaction amounts. User can create multiple pending transactions totaling more than their balance. When verified in sequence, balance can go negative, causing data corruption.",
-      "consequence": "Financial data corruption. User with ₹1000 can create two ₹1000 pending transactions, verify both, ending with -₹1000 balance. Violates business logic and could cause accounting errors.",
-      "triggeringPath": "Alice has ₹1000 → creates Transaction A for ₹1000 (pending) → creates Transaction B for ₹1000 (pending, balance check still sees ₹1000) → verifies A (balance → ₹0) → verifies B (balance → -₹1000)",
-      "requiredFix": "Add query to sum pending transactions: SELECT COALESCE(SUM(amount), 0) as totalPending FROM transactions WHERE sender_id = ? AND status = 'pending'. Validate amount <= (balance - totalPending) before creating transaction."
+      "severity": "CRITICAL",
+      "title": "Fraud Check Endpoint Uses Malformed Double-Path",
+      "file": "frontend/js/face-verification.js",
+      "line": 490,
+      "description": "The fraud check endpoint call uses path '/fraud/fraud/check' which creates a malformed URL with double 'fraud' segments. This violates REST API conventions and creates technical debt.",
+      "evidence": "Code at line 490: `const response = await apiCall(`${CONFIG.API_BASE_URL}/fraud/fraud/check`, {`\n\nRoot cause: Server.js registers transactions router at '/api/fraud' (server.js:60), and transactions router defines endpoint as '/fraud/check' (transactions.js:116), creating path '/api/fraud' + '/fraud/check' = '/api/fraud/fraud/check'",
+      "consequence": "API path inconsistency, maintenance confusion, technical debt. While the system may work functionally, this violates REST conventions and will cause issues during API evolution and documentation.",
+      "requiredFix": "Option A (Recommended):\n1. Change backend/routes/transactions.js line 116 from `router.post('/fraud/check', ...)` to `router.post('/check', ...)`\n2. Change frontend/js/face-verification.js line 490 from `${CONFIG.API_BASE_URL}/fraud/fraud/check` to `${CONFIG.API_BASE_URL}/fraud/check`\n\nThis creates the correct path: /api/fraud + /check = /api/fraud/check",
+      "affectedFeature": "Fraud detection during transaction verification",
+      "userImpact": "Technical debt and API inconsistency"
     }
   ],
-  "reviewDoc": "c:\\Users\\akinu\\OneDrive\\Pictures\\timetable\\ip-3\\facesecure-pay\\.agents\\tasks\\code-review.md"
+  "reviewDoc": "c:\\Users\\akinu\\OneDrive\\Pictures\\timetable\\ip-3\\facesecure-pay\\.agents\\tasks\\review.md"
 }
