@@ -51,6 +51,17 @@ router.post('/register', [
     
     const { email, password, full_name, phone, username } = req.body;
     
+    // Validate phone is provided (now required)
+    if (!phone || phone.trim() === '') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Phone number is required' 
+      });
+    }
+    
+    // Normalize phone number (remove spaces, dashes, etc.)
+    const normalizedPhone = phone.replace(/[\s\-\(\)]/g, '');
+    
     // Normalize username to lowercase for case-insensitive uniqueness
     const normalizedUsername = username.toLowerCase();
     
@@ -80,18 +91,31 @@ router.post('/register', [
       });
     }
     
+    // Check if phone number already exists
+    const [existingPhone] = await db.query(
+      'SELECT id FROM users WHERE payment_number = ?',
+      [normalizedPhone]
+    );
+    
+    if (existingPhone.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Phone number already registered' 
+      });
+    }
+    
     // Hash password
     const password_hash = await bcrypt.hash(password, 10);
     
-    // Generate unique payment number
-    const paymentNumber = await generateUniquePaymentNumber();
+    // Use phone number as payment number (no random generation)
+    const paymentNumber = normalizedPhone;
     
     // Insert user with starting balance of ₹1000
     const [result] = await db.query(`
       INSERT INTO users 
       (username, email, password_hash, full_name, phone, payment_number, balance)
       VALUES (?, ?, ?, ?, ?, ?, 1000.00)
-    `, [normalizedUsername, email, password_hash, full_name, phone || null, paymentNumber]);
+    `, [normalizedUsername, email, password_hash, full_name, phone, paymentNumber]);
     
     const userId = result.insertId;
     

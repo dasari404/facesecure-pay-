@@ -1,0 +1,30 @@
+# Environment Variables (NEVER commit!)
+.env
+.env.local
+.env.production
+*.env
+
+# Node modules
+node_modules/
+npm-debug.log
+
+# Supabase secrets
+.supabase/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Temp
+tmp/
+temp/
+
+# Agent tasks (optional)
+.agents/

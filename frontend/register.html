@@ -70,14 +70,16 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="phone">Phone Number (Optional)</label>
+                        <label for="phone">Phone Number</label>
                         <input 
                             type="tel" 
                             id="phone" 
                             name="phone"
                             placeholder="Enter your phone number"
+                            required
                             autocomplete="tel"
                         >
+                        <span class="form-hint">Required for receiving payments</span>
                     </div>
 
                     <div class="form-group">
@@ -182,8 +184,14 @@
                 return;
             }
             
-            // Validate phone if provided (now optional)
-            if (phone && phone.trim() !== '' && !isValidPhone(phone)) {
+            // Validate phone (REQUIRED)
+            if (!phone || phone.trim() === '') {
+                errorDiv.textContent = 'Phone number is required';
+                errorDiv.style.display = 'flex';
+                return;
+            }
+            
+            if (!isValidPhone(phone)) {
                 errorDiv.textContent = 'Please enter a valid phone number';
                 errorDiv.style.display = 'flex';
                 return;
@@ -199,7 +207,7 @@
                         email,
                         password,
                         full_name: fullName,
-                        phone: phone || undefined,
+                        phone: phone,
                         username
                     }
                 });
@@ -210,13 +218,19 @@
                     localStorage.setItem('facepay_user', JSON.stringify(response.user));
                     
                     // Show success message with payment number
-                    successDiv.textContent = 'Registration successful! ';
-                    successDiv.style.display = 'flex';
+                    const paymentNumberElement = document.getElementById('generated-payment-number');
+                    const paymentDisplayElement = document.getElementById('payment-number-display');
                     
-                    if (response.user.payment_number) {
-                        document.getElementById('generated-payment-number').textContent = response.user.payment_number;
-                        document.getElementById('payment-number-display').style.display = 'block';
+                    if (paymentNumberElement && response.user.payment_number) {
+                        paymentNumberElement.textContent = response.user.payment_number;
                     }
+                    if (paymentDisplayElement) {
+                        paymentDisplayElement.style.display = 'block';
+                    }
+                    
+                    // Set success message without replacing HTML
+                    successDiv.innerHTML = 'Registration successful!' + successDiv.innerHTML;
+                    successDiv.style.display = 'flex';
                     
                     // Redirect after 3 seconds
                     setTimeout(() => {
