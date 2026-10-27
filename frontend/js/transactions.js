@@ -114,13 +114,19 @@ function displayTransactions(transactions) {
     const otherParty = isSent ? tx.recipient.name : tx.sender.name;
     const statusClass = tx.status;
     
+    // Determine if transaction is clickable (pending SENT transaction)
+    const isClickable = isSent && tx.status === 'pending';
+    const clickableClass = isClickable ? 'transaction-clickable' : '';
+    const clickHandler = isClickable ? `onclick="handleTransactionClick('${tx.transactionId}', ${tx.amount}, '${otherParty.replace(/'/g, "\\'")}')"` : '';
+    
     return `
-      <div class="transaction-item">
+      <div class="transaction-item ${clickableClass}" ${clickHandler}>
         <div class="transaction-left">
           <div class="transaction-icon ${iconClass}">${icon}</div>
           <div class="transaction-details">
             <h4>${isSent ? 'Sent to' : 'Received from'} ${otherParty}</h4>
             <p>${formatDate(tx.createdAt)}</p>
+            ${isClickable ? '<small style="color: #f59e0b;">⚠️ Click to complete verification</small>' : ''}
           </div>
         </div>
         <div class="transaction-right">
@@ -132,6 +138,48 @@ function displayTransactions(transactions) {
       </div>
     `;
   }).join('');
+}
+
+// Handle clicking on a pending transaction to complete verification
+async function handleTransactionClick(transactionId, amount, recipientName) {
+  console.log('=== TRANSACTION CLICKED ===');
+  console.log('Transaction ID:', transactionId);
+  console.log('Amount:', amount);
+  console.log('Recipient:', recipientName);
+  
+  // Store transaction data globally for verification module
+  currentTransactionId = transactionId;
+  window.currentRecipient = { full_name: recipientName };
+  window.currentTransactionAmount = amount;
+  window.isRecipientVerification = false; // This is sender continuing their verification
+  
+  console.log('Set currentTransactionId:', currentTransactionId);
+  
+  // Show send money section
+  showSection('send-money');
+  
+  // Hide the form, show only verification
+  const form = document.getElementById('send-money-form');
+  if (form) {
+    form.style.display = 'none';
+  }
+  
+  // Update page header for context
+  const pageTitle = document.querySelector('#send-money-section .page-title');
+  const pageSubtitle = document.querySelector('#send-money-section .page-subtitle');
+  if (pageTitle) {
+    pageTitle.textContent = 'Complete Verification';
+  }
+  if (pageSubtitle) {
+    pageSubtitle.textContent = `Complete face verification to send ₹${amount.toFixed(2)} to ${recipientName}`;
+  }
+  
+  // Show verification section immediately
+  const verificationSection = document.getElementById('verification-section');
+  if (verificationSection) {
+    verificationSection.classList.add('show');
+    verificationSection.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 // Search for recipient by payment number (with validation)
@@ -442,6 +490,7 @@ function showSection(sectionName) {
     document.getElementById('send-money-section').style.display = 'block';
   } else if (sectionName === 'history') {
     document.getElementById('history-section').style.display = 'block';
+    loadTransactionHistory(); // Reload transaction history when viewing
   } else if (sectionName === 'pending-receipts') {
     document.getElementById('pending-receipts-section').style.display = 'block';
   }
@@ -455,6 +504,11 @@ function showSection(sectionName) {
   if (activeLink) {
     activeLink.classList.add('active');
   }
+}
+
+// Show full transaction history section
+function showFullHistory() {
+  showSection('history');
 }
 
 // Initialize on page load

@@ -1310,3 +1310,16 @@
 .nav-links a.active {
     color: var(--text-primary);
 }
+
+/* ===== CLICKABLE TRANSACTIONS ===== */
+.transaction-item.transaction-clickable {
+    cursor: pointer;
+    border-left: 3px solid #f59e0b;
+}
+
+.transaction-item.transaction-clickable:hover {
+    background: rgba(245, 158, 11, 0.05);
+    border-color: #f59e0b;
+    transform: translateX(2px);
+    transition: all 0.2s;
+}
