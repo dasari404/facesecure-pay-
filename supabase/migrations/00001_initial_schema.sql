@@ -1,3 +1,4 @@
+
 -- FaceSecure Pay - Supabase Database Schema
 -- Run this in your Supabase SQL Editor: https://supabase.com/dashboard/project/oosuhjvvyncmpoabmvru/editor
 
@@ -28,7 +29,7 @@ CREATE INDEX idx_profiles_phone ON profiles(phone);
 -- 2. TRANSACTIONS TABLE
 -- =====================================================
 CREATE TABLE transactions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     transaction_id TEXT UNIQUE NOT NULL,
     sender_id UUID NOT NULL REFERENCES profiles(id) ON DELETE RESTRICT,
     recipient_id UUID NOT NULL REFERENCES profiles(id) ON DELETE RESTRICT,
@@ -74,19 +75,19 @@ CREATE INDEX idx_transactions_created ON transactions(created_at DESC);
 -- 3. FACE REGISTRATIONS TABLE
 -- =====================================================
 CREATE TABLE face_registrations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     face_photo_url TEXT,  -- URL to Supabase Storage
     face_descriptor JSONB,  -- 128D face descriptor as JSON
     is_active BOOLEAN DEFAULT TRUE,
     registered_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    -- Only one active face per user
-    CONSTRAINT one_active_face_per_user UNIQUE (user_id, is_active) WHERE is_active = TRUE
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Index
+-- Only one active face per user (partial unique index)
+CREATE UNIQUE INDEX idx_one_active_face_per_user ON face_registrations(user_id) WHERE is_active = TRUE;
+
+-- Index for faster lookups
 CREATE INDEX idx_face_registrations_user ON face_registrations(user_id) WHERE is_active = TRUE;
 
 -- =====================================================
@@ -387,3 +388,4 @@ $$;
 -- 2. Create 'face-photos' bucket in Storage
 -- 3. Set up Twilio for SMS OTP in Authentication
 -- 4. Update frontend to use Supabase client
+
