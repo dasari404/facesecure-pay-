@@ -2,7 +2,7 @@
 // Run: node backend/migrate-add-payment-number.js
 
 const mysql = require('mysql2/promise');
-require('dotenv').config({ path: './backend/.env' });
+require('dotenv').config();
 
 // Generate unique random 10-digit payment number
 function generatePaymentNumber() {

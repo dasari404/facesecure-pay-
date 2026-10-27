@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Login Fix</title>
+    <style>
+        body { font-family: system-ui; padding: 40px; background: #1a1a1a; color: white; }
+        button { padding: 15px 30px; font-size: 18px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 10px; }
+        button:hover { background: #2563eb; }
+        pre { background: #2a2a2a; padding: 20px; border-radius: 8px; }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Quick Login Fix</h1>
+    <p>Click the button below to login and get a fresh token:</p>
+    
+    <button onclick="quickLogin()">Login as Alice</button>
+    <button onclick="quickLogin2()">Login as Bob</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        async function quickLogin() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<pre>🔄 Logging in...</pre>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'alice@test.com',
+                        password: 'password123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('facepay_token', data.token);
+                    localStorage.setItem('facepay_user', JSON.stringify(data.user));
+                    
+                    result.innerHTML = `
+                        <pre class="success">✅ Login successful!
+
+Token saved: ${data.token.substring(0, 50)}...
+
+User: ${data.user.full_name}
+Email: ${data.user.email}
+Payment #: ${data.user.payment_number}
+Balance: ₹${data.user.balance}
+
+<strong>Redirecting to transactions page...</strong></pre>
+                    `;
+                    
+                    setTimeout(() => {
+                        window.location.href = 'transactions.html';
+                    }, 2000);
+                } else {
+                    result.innerHTML = `<pre class="error">❌ Login failed: ${data.message}</pre>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<pre class="error">❌ Error: ${error.message}</pre>`;
+            }
+        }
+        
+        async function quickLogin2() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<pre>🔄 Logging in as Bob...</pre>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'bob@test.com',
+                        password: 'password123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('facepay_token', data.token);
+                    localStorage.setItem('facepay_user', JSON.stringify(data.user));
+                    
+                    result.innerHTML = `<pre class="success">✅ Login successful as Bob!
+
+Redirecting...</pre>`;
+                    
+                    setTimeout(() => {
+                        window.location.href = 'transactions.html';
+                    }, 2000);
+                } else {
+                    result.innerHTML = `<pre class="error">❌ Login failed: ${data.message}</pre>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<pre class="error">❌ Error: ${error.message}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

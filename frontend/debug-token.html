@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Token</title>
+    <style>
+        body { font-family: system-ui; padding: 40px; background: #1a1a1a; color: white; }
+        pre { background: #2a2a2a; padding: 20px; border-radius: 8px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 10px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Token Debugger</h1>
+    
+    <button onclick="showToken()">Show Token</button>
+    <button onclick="clearToken()">Clear Token</button>
+    <button onclick="relogin()">Test Login</button>
+    
+    <div id="output"></div>
+    
+    <script>
+        function showToken() {
+            const output = document.getElementById('output');
+            const token = localStorage.getItem('facepay_token');
+            const user = localStorage.getItem('facepay_user');
+            
+            if (!token) {
+                output.innerHTML = '<pre style="color: #ef4444;">❌ No token found in localStorage</pre>';
+                return;
+            }
+            
+            // Parse JWT (decode base64)
+            try {
+                const parts = token.split('.');
+                const payload = JSON.parse(atob(parts[1]));
+                
+                const now = Math.floor(Date.now() / 1000);
+                const expired = payload.exp < now;
+                const timeLeft = payload.exp - now;
+                
+                output.innerHTML = `
+                    <h3>Token Info:</h3>
+                    <pre>
+<strong>Token exists:</strong> ✅ Yes
+<strong>Token length:</strong> ${token.length} characters
+
+<strong>Payload:</strong>
+${JSON.stringify(payload, null, 2)}
+
+<strong>Issued at:</strong> ${new Date(payload.iat * 1000).toLocaleString()}
+<strong>Expires at:</strong> ${new Date(payload.exp * 1000).toLocaleString()}
+<strong>Time left:</strong> ${Math.floor(timeLeft / 3600)} hours ${Math.floor((timeLeft % 3600) / 60)} minutes
+
+<strong>Status:</strong> ${expired ? '❌ EXPIRED' : '✅ VALID'}
+
+<strong>User data in localStorage:</strong>
+${user || 'None'}
+                    </pre>
+                `;
+            } catch (error) {
+                output.innerHTML = `<pre style="color: #ef4444;">❌ Error parsing token: ${error.message}</pre>`;
+            }
+        }
+        
+        function clearToken() {
+            localStorage.removeItem('facepay_token');
+            localStorage.removeItem('facepay_user');
+            document.getElementById('output').innerHTML = '<pre>✅ Token cleared</pre>';
+        }
+        
+        async function relogin() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<pre>🔄 Logging in as alice@test.com...</pre>';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'alice@test.com',
+                        password: 'password123'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('facepay_token', data.token);
+                    localStorage.setItem('facepay_user', JSON.stringify(data.user));
+                    
+                    output.innerHTML = `<pre style="color: #10b981;">✅ Login successful!
+                    
+Token saved to localStorage.
+                    
+Click "Show Token" to view details.</pre>`;
+                } else {
+                    output.innerHTML = `<pre style="color: #ef4444;">❌ Login failed: ${data.message}</pre>`;
+                }
+            } catch (error) {
+                output.innerHTML = `<pre style="color: #ef4444;">❌ Error: ${error.message}</pre>`;
+            }
+        }
+        
+        // Auto-show token on load
+        window.onload = showToken;
+    </script>
+</body>
+</html>

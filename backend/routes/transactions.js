@@ -560,6 +560,74 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
+// Get pending receipts (transactions awaiting recipient verification)
+// IMPORTANT: This route must come BEFORE /:id to avoid matching "pending-receipts" as an ID
+router.get('/pending-receipts', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log('=== PENDING RECEIPTS REQUEST ===');
+    console.log('Fetching pending receipts for userId:', userId);
+
+    const [transactions] = await db.query(`
+      SELECT 
+        t.*,
+        sender.full_name as sender_name,
+        sender.email as sender_email,
+        sender.payment_number as sender_payment_number,
+        sender.username as sender_username
+      FROM transactions t
+      JOIN users sender ON t.sender_id = sender.id
+      WHERE t.recipient_id = ?
+        AND t.sender_verified = TRUE
+        AND t.recipient_verified = FALSE
+        AND t.status = 'pending'
+      ORDER BY t.sender_verification_time DESC
+    `, [userId]);
+
+    console.log('Found', transactions.length, 'pending receipts');
+    if (transactions.length > 0) {
+      console.log('First transaction:', {
+        transaction_id: transactions[0].transaction_id,
+        sender_name: transactions[0].sender_name,
+        amount: transactions[0].amount,
+        sender_verified: transactions[0].sender_verified,
+        recipient_verified: transactions[0].recipient_verified
+      });
+    }
+
+    const formattedTransactions = transactions.map(tx => ({
+      id: tx.id,
+      transaction_id: tx.transaction_id,
+      amount: parseFloat(tx.amount),
+      description: tx.description,
+      transaction_type: tx.transaction_type,
+      verification_stage: tx.verification_stage,
+      sender_id: tx.sender_id,
+      sender_name: tx.sender_name,
+      sender_username: tx.sender_username,
+      sender_payment_number: tx.sender_payment_number,
+      sender_email: tx.sender_email,
+      sender_verified_at: tx.sender_verification_time,
+      created_at: tx.created_at,
+      waiting_time_minutes: Math.round((Date.now() - new Date(tx.sender_verification_time || tx.created_at).getTime()) / 60000)
+    }));
+
+    res.json({
+      success: true,
+      transactions: formattedTransactions,
+      count: formattedTransactions.length,
+      totalAmount: formattedTransactions.reduce((sum, tx) => sum + tx.amount, 0)
+    });
+
+  } catch (error) {
+    console.error('Pending receipts error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending receipts'
+    });
+  }
+});
+
 // Get single transaction details
 router.get('/:id', verifyToken, async (req, res) => {
   try {
@@ -623,6 +691,359 @@ router.get('/:id', verifyToken, async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Failed to fetch transaction' 
+    });
+  }
+});
+
+// Verify sender (Phase 1 of dual verification)
+router.post('/verify-sender', verifyToken, [
+  body('transactionId').notEmpty(),
+  body('faceVerified').isBoolean(),
+  body('livenessScore').optional().isFloat({ min: 0, max: 100 })
+], async (req, res) => {
+  try {
+    const { transactionId, faceVerified, livenessScore } = req.body;
+    const userId = req.user.id;
+
+    console.log('=== VERIFY SENDER REQUEST ===');
+    console.log('Transaction ID:', transactionId);
+    console.log('User ID:', userId);
+    console.log('Face Verified:', faceVerified);
+    console.log('Liveness Score:', livenessScore);
+
+    // Get transaction - must be sender
+    const [transactions] = await db.query(
+      'SELECT * FROM transactions WHERE transaction_id = ? AND sender_id = ?',
+      [transactionId, userId]
+    );
+
+    if (transactions.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transaction not found or you are not the sender'
+      });
+    }
+
+    const transaction = transactions[0];
+
+    // Check transaction is still pending
+    if (transaction.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Transaction is already ${transaction.status}`
+      });
+    }
+
+    // Check if sender already verified
+    if (transaction.sender_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sender has already verified this transaction'
+      });
+    }
+
+    // Check if fraud check passed
+    if (transaction.fraud_check_passed === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction failed fraud check'
+      });
+    }
+
+    // Verify sender has registered face
+    const [[senderFace]] = await db.query(
+      'SELECT id, face_photo FROM face_registrations WHERE user_id = ? AND is_active = TRUE',
+      [userId]
+    );
+
+    if (!senderFace) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please register your face photo before making transactions',
+        requiresFaceRegistration: true
+      });
+    }
+
+    if (!senderFace.face_photo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Face photo not found. Please re-register your face',
+        requiresFaceRegistration: true
+      });
+    }
+
+    // Verify face and liveness
+    const livenessThreshold = 60;
+    const verificationPassed = faceVerified && (livenessScore >= livenessThreshold);
+
+    if (!verificationPassed) {
+      await db.query(
+        'UPDATE transactions SET verification_attempts = verification_attempts + 1 WHERE id = ?',
+        [transaction.id]
+      );
+
+      return res.status(400).json({
+        success: false,
+        message: 'Sender verification failed. Face match or liveness check did not pass.',
+        faceVerified,
+        livenessScore,
+        livenessThreshold
+      });
+    }
+
+    // Update transaction - mark sender as verified
+    await db.query(`
+      UPDATE transactions 
+      SET sender_verified = TRUE,
+          sender_verification_time = NOW(),
+          verification_stage = 'pending_recipient',
+          liveness_score = ?
+      WHERE id = ?
+    `, [livenessScore || 0, transaction.id]);
+
+    // Get recipient details
+    const [[recipient]] = await db.query(
+      'SELECT id, full_name, email, payment_number FROM users WHERE id = ?',
+      [transaction.recipient_id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Sender verified successfully. Waiting for recipient verification.',
+      transaction: {
+        id: transaction.id,
+        transactionId: transaction.transaction_id,
+        amount: parseFloat(transaction.amount),
+        status: 'pending',
+        verificationStage: 'pending_recipient',
+        senderVerified: true,
+        recipientVerified: false
+      },
+      recipient: {
+        name: recipient.full_name,
+        paymentNumber: recipient.payment_number
+      },
+      nextStep: 'Recipient must verify to complete the transaction'
+    });
+
+  } catch (error) {
+    console.error('Sender verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify sender'
+    });
+  }
+});
+
+// Verify recipient (Phase 2 of dual verification - completes payment)
+router.post('/verify-recipient', verifyToken, [
+  body('transactionId').notEmpty(),
+  body('faceVerified').isBoolean(),
+  body('livenessScore').optional().isFloat({ min: 0, max: 100 })
+], async (req, res) => {
+  try {
+    const { transactionId, faceVerified, livenessScore } = req.body;
+    const userId = req.user.id;
+
+    console.log('=== VERIFY RECIPIENT REQUEST ===');
+    console.log('Transaction ID:', transactionId);
+    console.log('User ID (Recipient):', userId);
+    console.log('Face Verified:', faceVerified);
+    console.log('Liveness Score:', livenessScore);
+
+    // Get transaction - must be recipient
+    const [transactions] = await db.query(
+      'SELECT * FROM transactions WHERE transaction_id = ? AND recipient_id = ?',
+      [transactionId, userId]
+    );
+
+    if (transactions.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transaction not found or you are not the recipient'
+      });
+    }
+
+    const transaction = transactions[0];
+
+    // Check transaction is still pending
+    if (transaction.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Transaction is already ${transaction.status}`
+      });
+    }
+
+    // Check if sender has verified first
+    if (!transaction.sender_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sender must verify first before recipient can accept',
+        senderVerified: false
+      });
+    }
+
+    // Check if recipient already verified
+    if (transaction.recipient_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Recipient has already verified this transaction'
+      });
+    }
+
+    // Verify recipient has registered face
+    const [[recipientFace]] = await db.query(
+      'SELECT id, face_photo FROM face_registrations WHERE user_id = ? AND is_active = TRUE',
+      [userId]
+    );
+
+    if (!recipientFace) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please register your face photo before receiving payments',
+        requiresFaceRegistration: true
+      });
+    }
+
+    if (!recipientFace.face_photo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Face photo not found. Please re-register your face',
+        requiresFaceRegistration: true
+      });
+    }
+
+    // Verify face and liveness
+    const livenessThreshold = 60;
+    const verificationPassed = faceVerified && (livenessScore >= livenessThreshold);
+
+    if (!verificationPassed) {
+      await db.query(
+        'UPDATE transactions SET verification_attempts = verification_attempts + 1 WHERE id = ?',
+        [transaction.id]
+      );
+
+      return res.status(400).json({
+        success: false,
+        message: 'Recipient verification failed. Face match or liveness check did not pass.',
+        faceVerified,
+        livenessScore,
+        livenessThreshold
+      });
+    }
+
+    // Start database transaction for atomic balance update
+    const connection = await db.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      // Lock the transaction row
+      const [lockedTransactions] = await connection.query(
+        'SELECT * FROM transactions WHERE transaction_id = ? FOR UPDATE',
+        [transactionId]
+      );
+
+      if (lockedTransactions.length === 0) {
+        await connection.rollback();
+        connection.release();
+        return res.status(404).json({
+          success: false,
+          message: 'Transaction not found or already processed'
+        });
+      }
+
+      const lockedTx = lockedTransactions[0];
+
+      // Double-check status after lock
+      if (lockedTx.status !== 'pending') {
+        await connection.rollback();
+        connection.release();
+        return res.status(400).json({
+          success: false,
+          message: `Transaction is already ${lockedTx.status}`
+        });
+      }
+
+      // Deduct from sender
+      await connection.query(
+        'UPDATE users SET balance = balance - ? WHERE id = ?',
+        [transaction.amount, transaction.sender_id]
+      );
+
+      // Add to recipient
+      await connection.query(
+        'UPDATE users SET balance = balance + ? WHERE id = ?',
+        [transaction.amount, transaction.recipient_id]
+      );
+
+      // Update transaction as completed with both verifications
+      await connection.query(`
+        UPDATE transactions 
+        SET status = 'completed',
+            recipient_verified = TRUE,
+            recipient_verification_time = NOW(),
+            verification_stage = 'both_verified',
+            face_verified = TRUE,
+            liveness_verified = TRUE,
+            completed_at = NOW()
+        WHERE id = ?
+      `, [transaction.id]);
+
+      await connection.commit();
+
+      // Get updated balances
+      const [[senderUpdated]] = await connection.query(
+        'SELECT balance FROM users WHERE id = ?',
+        [transaction.sender_id]
+      );
+
+      const [[recipientUpdated]] = await connection.query(
+        'SELECT balance FROM users WHERE id = ?',
+        [transaction.recipient_id]
+      );
+
+      connection.release();
+
+      res.json({
+        success: true,
+        message: 'Payment completed successfully! Both parties verified.',
+        transaction: {
+          id: transaction.id,
+          transactionId: transaction.transaction_id,
+          amount: parseFloat(transaction.amount),
+          status: 'completed',
+          verificationStage: 'both_verified',
+          senderVerified: true,
+          recipientVerified: true,
+          senderBalance: parseFloat(senderUpdated.balance),
+          recipientBalance: parseFloat(recipientUpdated.balance)
+        }
+      });
+
+    } catch (txError) {
+      await connection.rollback();
+      connection.release();
+      throw txError;
+    }
+
+  } catch (error) {
+    console.error('Recipient verification error:', error);
+    
+    let errorMessage = 'Failed to verify recipient';
+    let statusCode = 500;
+
+    if (error.code === 'ER_DUP_ENTRY') {
+      errorMessage = 'Transaction already processed';
+      statusCode = 409;
+    } else if (error.code === 'ER_LOCK_WAIT_TIMEOUT') {
+      errorMessage = 'Transaction is being processed. Please try again.';
+      statusCode = 503;
+    }
+
+    res.status(statusCode).json({
+      success: false,
+      message: errorMessage
     });
   }
 });

@@ -33,6 +33,16 @@
                     <div class="user-avatar" id="user-avatar">👤</div>
                     <div class="user-name" id="user-name">Loading...</div>
                     <div class="user-email" id="user-email"></div>
+                    
+                    <!-- Face Registration Status -->
+                    <div id="face-status-widget" class="face-status-widget" style="margin-top: 12px; padding: 8px 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; display: none;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #ef4444;">
+                            <span>⚠️</span>
+                            <span>Face not registered</span>
+                        </div>
+                        <a href="#" onclick="openFaceRegistrationModal(); return false;" style="display: inline-block; margin-top: 6px; font-size: 11px; color: #ef4444; text-decoration: underline;">Register Now</a>
+                    </div>
+                    
                     <div class="user-payment-number" id="user-payment-number">
                         <span class="payment-label">Payment Number</span>
                         <span class="payment-value" id="payment-number-value">-</span>
@@ -48,7 +58,9 @@
 
                 <ul class="sidebar-nav">
                     <li><a href="#send-money" class="active"><span class="icon">💸</span> Send Money</a></li>
+                    <li><a href="#pending-receipts" id="pending-receipts-link"><span class="icon">⏳</span> Pending Receipts <span id="pending-badge" class="nav-badge" style="display: none;">0</span></a></li>
                     <li><a href="#history"><span class="icon">📜</span> Transaction History</a></li>
+                    <li><a href="#" onclick="openFaceRegistrationModal(); return false;"><span class="icon">📸</span> Register Face</a></li>
                     <li><a href="#security"><span class="icon">🔒</span> Security</a></li>
                     <li><a href="#settings"><span class="icon">⚙️</span> Settings</a></li>
                 </ul>
@@ -246,7 +258,76 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- Pending Receipts Section -->
+                <section id="pending-receipts-section" style="display: none;">
+                    <div class="page-header">
+                        <h1 class="page-title">Pending Receipts</h1>
+                        <p class="page-subtitle">Transactions waiting for your verification</p>
+                    </div>
+
+                    <div class="transaction-card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <span>⏳</span>
+                                Pending Payments
+                            </h2>
+                            <span class="card-badge" id="pending-count-badge">0 Pending</span>
+                        </div>
+
+                        <div id="pending-list" class="transaction-list">
+                            <div class="empty-state">
+                                <div class="icon">✅</div>
+                                <p>No pending receipts</p>
+                                <small>When someone sends you money, it will appear here for verification</small>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </main>
+        </div>
+    </div>
+
+    <!-- Face Registration Modal -->
+    <div id="face-registration-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.9); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: var(--bg-secondary); border-radius: 16px; padding: 32px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">📸 Register Your Face</h2>
+                <button onclick="closeFaceRegistrationModal()" style="background: none; border: none; font-size: 32px; color: var(--text-secondary); cursor: pointer; padding: 0; width: 40px; height: 40px;">&times;</button>
+            </div>
+            
+            <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px;">
+                Take a clear photo of your face. This will be used to verify your identity during transactions.
+            </p>
+            
+            <!-- Camera View -->
+            <div id="reg-camera-container" style="position: relative; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+                <video id="reg-camera-video" autoplay playsinline style="width: 100%; height: auto; display: block;"></video>
+                <canvas id="reg-camera-canvas" style="display: none;"></canvas>
+                <div id="reg-face-guide" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; height: 400px; border: 3px solid #3b82f6; border-radius: 50%; pointer-events: none;"></div>
+                <div id="reg-face-status" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); padding: 8px 16px; border-radius: 20px; color: white; font-size: 14px;">Position your face in the oval</div>
+            </div>
+            
+            <!-- Captured Photo Preview -->
+            <div id="reg-photo-preview" style="display: none; margin-bottom: 20px;">
+                <p style="color: var(--text-primary); margin-bottom: 12px; font-weight: 600;">Preview:</p>
+                <img id="reg-photo-img" style="width: 100%; border-radius: 12px; border: 2px solid var(--accent-primary);" />
+            </div>
+            
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 12px;">
+                <button id="reg-capture-btn" onclick="captureFacePhoto()" class="btn btn-primary" style="flex: 1;">
+                    📸 Capture Photo
+                </button>
+                <button id="reg-retake-btn" onclick="retakeFacePhoto()" class="btn btn-secondary" style="flex: 1; display: none;">
+                    🔄 Retake
+                </button>
+                <button id="reg-save-btn" onclick="saveFaceRegistration()" class="btn btn-primary" style="flex: 1; display: none;">
+                    ✅ Save & Register
+                </button>
+            </div>
+            
+            <div id="reg-message" style="margin-top: 16px; padding: 12px; border-radius: 8px; display: none;"></div>
         </div>
     </div>
 
@@ -256,5 +337,36 @@
     <script src="js/auth.js"></script>
     <script src="js/transactions.js"></script>
     <script src="js/face-verification.js"></script>
+    
+    <!-- Face-API.js - Real Face Detection -->
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script>
+        // Initialize face-api.js models on page load
+        let faceApiReady = false;
+        
+        window.addEventListener('load', async () => {
+            try {
+                console.log('🔄 Loading face-api.js models...');
+                
+                await faceapi.nets.tinyFaceDetector.loadFromUri('/models-faceapi');
+                await faceapi.nets.faceLandmark68Net.loadFromUri('/models-faceapi');
+                await faceapi.nets.faceRecognitionNet.loadFromUri('/models-faceapi');
+                
+                faceApiReady = true;
+                console.log('✅ Face-API.js ready - Real face detection enabled');
+                
+                // Notify face-verification.js
+                if (typeof window.onFaceApiReady === 'function') {
+                    window.onFaceApiReady();
+                }
+            } catch (error) {
+                console.error('❌ Failed to load face-api.js:', error);
+                console.warn('⚠️ Falling back to simulated verification');
+            }
+        });
+        
+        // Make faceapi available globally
+        window.isFaceApiReady = () => faceApiReady;
+    </script>
 </body>
 </html>

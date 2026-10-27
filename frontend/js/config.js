@@ -25,13 +25,17 @@ const API = {
     SEND_MONEY: `${CONFIG.API_BASE_URL}/transactions/send`,
     GET_TRANSACTIONS: `${CONFIG.API_BASE_URL}/transactions`,
     GET_TRANSACTION: (txId) => `${CONFIG.API_BASE_URL}/transactions/${txId}`,
-    TRANSACTIONS_VERIFY: `${CONFIG.API_BASE_URL}/transactions/verify`,
+    TRANSACTIONS_VERIFY: `${CONFIG.API_BASE_URL}/transactions/verify`, // Old single verification (deprecated)
+    TRANSACTIONS_VERIFY_SENDER: `${CONFIG.API_BASE_URL}/transactions/verify-sender`, // New: Phase 1
+    TRANSACTIONS_VERIFY_RECIPIENT: `${CONFIG.API_BASE_URL}/transactions/verify-recipient`, // New: Phase 2
+    TRANSACTIONS_PENDING_RECEIPTS: `${CONFIG.API_BASE_URL}/transactions/pending-receipts`, // New: Get pending receipts
     
     // Fraud
     CHECK_FRAUD: `${CONFIG.API_BASE_URL}/transactions/fraud/check`,
     REPORT_FRAUD: `${CONFIG.API_BASE_URL}/fraud/report`,
     
     // Face Verification
+    FACE_REGISTER: `${CONFIG.API_BASE_URL}/face/register`,
     VERIFY_FACE: `${CONFIG.API_BASE_URL}/transaction/verify-face`,
     DETECT_FACE: `${CONFIG.LIVENESS_API_URL}/detect-face`,
     
@@ -74,9 +78,16 @@ async function apiCall(url, options = {}) {
         config.body = JSON.stringify(options.body);
     }
     
+    console.log('API Call:', config.method, url);
+    if (config.body) {
+        console.log('Request body:', JSON.parse(config.body));
+    }
+    
     try {
         const response = await fetch(url, config);
         const data = await response.json();
+        
+        console.log('API Response:', response.status, data);
         
         if (!response.ok) {
             throw new Error(data.message || 'Request failed');
@@ -134,46 +145,6 @@ const USER_ROLES = {
     USER: 'user',
     ADMIN: 'admin'
 };
-
-// Helper function to make API calls
-async function apiCall(url, options = {}) {
-    const config = {
-        method: options.method || 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers
-        },
-        ...options
-    };
-    
-    // Add auth token if available
-    const token = options.isAdmin 
-        ? localStorage.getItem('facepay_admin_token')
-        : localStorage.getItem('facepay_token');
-    
-    if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    // Add body if present
-    if (options.body && config.method !== 'GET') {
-        config.body = JSON.stringify(options.body);
-    }
-    
-    try {
-        const response = await fetch(url, config);
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.message || 'Request failed');
-        }
-        
-        return data;
-    } catch (error) {
-        console.error('API call failed:', error);
-        throw error;
-    }
-}
 
 // Storage helper
 const Storage = {
